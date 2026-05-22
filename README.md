@@ -5,7 +5,7 @@
 
   ### Un grimoire Hyprland pour la communauté francophone
 
-  [![Version](https://img.shields.io/badge/version-1.1.2-e0789a?style=for-the-badge)](https://github.com/jonathanbourriauddev/grimoire)
+  [![Version](https://img.shields.io/badge/version-1.1.2-e0789a?style=for-the-badge)](https://github.com/gibeytech/Grimoire)
   [![Hyprland](https://img.shields.io/badge/Hyprland-0.55-bd93f9?style=for-the-badge)](https://hyprland.org)
   [![Lua](https://img.shields.io/badge/config-Lua-ffb86c?style=for-the-badge)](https://lua.org)
   [![Licence](https://img.shields.io/badge/licence-MIT-69ff94?style=for-the-badge)](./LICENSE)
@@ -63,7 +63,7 @@ Inspiré par [ML4W](https://github.com/mylinuxforwork/dotfiles), [End4](https://
 ### Installation automatique
 
 ```bash
-git clone https://github.com/jonathanbourriauddev/grimoire.git ~/dotfiles
+git clone https://github.com/gibeytech/Grimoire.git ~/dotfiles
 cd ~/dotfiles
 chmod +x install.sh
 ./install.sh
@@ -80,7 +80,7 @@ Le script :
 ### Installation manuelle
 
 ```bash
-git clone https://github.com/jonathanbourriauddev/grimoire.git ~/dotfiles
+git clone https://github.com/gibeytech/Grimoire.git ~/dotfiles
 cd ~/dotfiles
 stow hypr waybar kitty rofi fish starship swaync fastfetch \
      hyprpaper hyprlock hypridle wlogout nvim
@@ -215,11 +215,16 @@ dotfiles/
 - [ ] Installateur TUI interactif
 - [ ] Thèmes switchables
 - [ ] Curseur Grimoire v2 — rebuild Figma natif
+- [ ] Screenshots officiels Grimoire
+- [ ] GIF démo du bureau en action
 
 ### V3 — Communauté
 - [ ] Site vitrine
 - [ ] Discord francophone
 - [ ] Logo et identité visuelle complète
+- [ ] Post r/unixporn + r/linux_fr
+- [ ] Article dev.to/Hashnode en français
+- [ ] YouTube démo
 
 ---
 
@@ -239,9 +244,7 @@ dotfiles/
 
 ## 👤 Auteur
 
-**Jonathan Bourriaud** — [@jonathanbourriauddev](https://github.com/jonathanbourriauddev)
-
-Technicien réseau & développeur fullstack — side project passion.
+**gibeytech** — [@gibeytech](https://github.com/gibeytech)
 
 ---
 
