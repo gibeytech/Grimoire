@@ -8,7 +8,7 @@
 #  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝
 # =============================================================================
 #  Un grimoire Hyprland pour la communauté francophone 🔮
-#  https://github.com/jonathanbourriauddev/grimoire
+#  https://github.com/gibeytech/Grimoire
 #  Auteur : Jonathan Bourriaud
 #  Licence : MIT
 # =============================================================================
@@ -58,7 +58,7 @@ banner() {
   echo "  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝"
   echo -e "${RESET}"
   echo -e "${SECONDARY}${BOLD}  Un grimoire Hyprland pour la communauté francophone 🔮${RESET}"
-  echo -e "${DIM}  https://github.com/jonathanbourriauddev/grimoire${RESET}"
+  echo -e "${DIM}  https://github.com/gibeytech/Grimoire${RESET}"
   echo ""
   echo -e "${DIM}  Journal d'installation : ${LOG_FILE}${RESET}"
   echo ""
@@ -286,6 +286,16 @@ install_packages() {
     nwg-look
     # Gestionnaire de fichiers
     thunar
+    thunar-volman
+    gvfs
+    # Polkit
+    polkit-gnome
+    # Presse-papier persistant
+    cliphist
+    # Réseau GUI
+    network-manager-applet
+    # Lumière bleue
+    hyprsunset
     # SDDM & dépendances QML
     sddm
     qt5-quickcontrols2
@@ -859,6 +869,8 @@ summary() {
   echo -e "${CYAN}  2.${RESET} ${TEXT}Placez votre wallpaper dans ~/Pictures/wallpapers/grimoire.png${RESET}"
   echo -e "${CYAN}  3.${RESET} ${TEXT}Ouvrez nwg-look pour peaufiner le thème GTK${RESET}"
   echo -e "${CYAN}  4.${RESET} ${TEXT}Lancez Hyprland depuis SDDM ou via 'Hyprland' en TTY${RESET}"
+  echo -e "${CYAN}  5.${RESET} ${TEXT}Ajoutez dans autostart.lua : hl.exec_cmd(\"wl-paste --watch cliphist store\")${RESET}"
+  echo -e "${CYAN}  6.${RESET} ${TEXT}Keybind presse-papier suggéré : SUPER + SHIFT + V → cliphist list | rofi -dmenu | cliphist decode | wl-copy${RESET}"
   echo ""
   echo -e "${SECONDARY}  Bienvenue dans le Grimoire. 🔮${RESET}"
   echo ""
