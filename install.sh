@@ -744,63 +744,56 @@ setup_scripts() {
 # =============================================================================
 
 setup_cursors() {
-  step "Installation du thème curseur Grimoire"
+  step "Installation du thème curseur (Catppuccin Mocha Mauve)"
   set +e
 
-  local script_v1="$DOTFILES_DIR/scripts/build-grimoire-cursors.sh"
-  local script_v2="$DOTFILES_DIR/scripts/build-grimoire-cursors-v2.sh"
-  local cursor_source="$HOME/.cache/grimoire-cursors-build/themes/phinger-cursors-gruvbox-material"
+  local cursor_name="catppuccin-mocha-mauve-cursors"
+  local cursor_zip="catppuccin-mocha-mauve-cursors.zip"
+  local cursor_url="https://github.com/catppuccin/cursors/releases/latest/download/${cursor_zip}"
+  local install_dir="$HOME/.local/share/icons/$cursor_name"
 
-  for dep in xcur2png xcursorgen; do
-    if ! command -v "$dep" &>/dev/null; then
-      warn "$dep non disponible, tentative d'installation..."
-      local pkg="xcur2png"
-      [[ "$dep" == "xcursorgen" ]] && pkg="xorg-xcursorgen"
-      sudo pacman -S --noconfirm --needed "$pkg" >>"$LOG_FILE" 2>&1 ||
-        $AUR_HELPER -S --noconfirm --needed "$pkg" >>"$LOG_FILE" 2>&1 ||
-        {
-          error "Impossible d'installer $pkg — curseurs ignorés"
-          set -e
-          return
-        }
-    fi
-  done
-
-  if [[ ! -d "$cursor_source" ]]; then
-    if [[ ! -f "$script_v1" ]]; then
-      warn "Script curseur v1 introuvable — impossible de télécharger la source"
-      set -e
-      return
-    fi
-    info "Téléchargement de la source curseur via v1..."
-    if bash "$script_v1" >>"$LOG_FILE" 2>&1; then
-      success "Source curseur téléchargée"
-    else
-      error "Échec du téléchargement de la source curseur"
-      set -e
-      return
-    fi
-  else
-    info "Source curseur déjà présente — skip v1"
-  fi
-
-  if [[ ! -f "$script_v2" ]]; then
-    warn "Script curseur v2 introuvable — ignoré"
+  if [[ -d "$install_dir" ]]; then
+    info "Curseur $cursor_name déjà installé — skip"
     set -e
     return
   fi
 
-  info "Recoloration Grimoire via v2..."
-  if bash "$script_v2" >>"$LOG_FILE" 2>&1; then
-    success "Thème curseur Grimoire installé dans ~/.local/share/icons/"
-    if [[ -d "$HOME/.local/share/icons/phinger-cursors-grimoire" ]]; then
-      sudo cp -r "$HOME/.local/share/icons/phinger-cursors-grimoire" /usr/share/icons/ >>"$LOG_FILE" 2>&1 &&
-        success "Curseur copié dans /usr/share/icons/ pour SDDM" ||
-        warn "Impossible de copier dans /usr/share/icons/ — SDDM utilisera le curseur par défaut"
-    fi
-  else
-    error "Échec de la recoloration curseur — voir le log"
+  info "Téléchargement de $cursor_name..."
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
+
+  if ! wget -q --show-progress "$cursor_url" -O "$tmp_dir/$cursor_zip" >>"$LOG_FILE" 2>&1; then
+    error "Échec du téléchargement du curseur — voir le log"
+    rm -rf "$tmp_dir"
+    set -e
+    return
   fi
+
+  info "Extraction du curseur..."
+  if ! unzip -q "$tmp_dir/$cursor_zip" -d "$HOME/.local/share/icons/" >>"$LOG_FILE" 2>&1; then
+    error "Échec de l'extraction du curseur"
+    rm -rf "$tmp_dir"
+    set -e
+    return
+  fi
+
+  rm -rf "$tmp_dir"
+  success "Curseur installé dans $install_dir"
+
+  # Copie dans /usr/share/icons pour SDDM
+  sudo cp -r "$install_dir" /usr/share/icons/ >>"$LOG_FILE" 2>&1 &&
+    success "Curseur copié dans /usr/share/icons/ pour SDDM" ||
+    warn "Impossible de copier dans /usr/share/icons/ — SDDM utilisera le curseur par défaut"
+
+  # Mise à jour de ~/.icons/default
+  mkdir -p "$HOME/.icons/default"
+  cat > "$HOME/.icons/default/index.theme" << EOF
+[Icon Theme]
+Name=Default
+Comment=Default Cursor Theme
+Inherits=$cursor_name
+EOF
+  success "~/.icons/default/index.theme mis à jour"
 
   set -e
 }
