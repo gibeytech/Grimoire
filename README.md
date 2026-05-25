@@ -45,6 +45,7 @@ Inspiré par [ML4W](https://github.com/mylinuxforwork/dotfiles), [End4](https://
 | Idle          | Hypridle                 |
 | Logout        | Wlogout                  |
 | Bluetooth     | Bluez + Blueman          |
+| Curseur       | Catppuccin Mocha Mauve   |
 | Dotfiles      | GNU Stow                 |
 | OSD           | SwayOSD                  |
 | Distro        | CachyOS / Arch Linux     |
@@ -198,7 +199,7 @@ dotfiles/
 - [x] Icônes Wlogout custom
 - [x] Support second écran HDMI-A-1
 - [x] Script `install.sh` automatique
-- [x] Thème curseur Grimoire
+- [x] Thème curseur — Catppuccin Mocha Mauve (curseur Grimoire v2 en V2)
 - [x] Keybinds finalisés (AZERTY codes, déplacement fenêtres)
 - [x] xdg-terminals.list configuré (Kitty)
 - [x] Waybar : date + heure + scroll volume/luminosité (SwayOSD)
@@ -214,7 +215,7 @@ dotfiles/
 - [ ] Shell Fish → ZSH
 - [ ] Installateur TUI interactif
 - [ ] Thèmes switchables
-- [ ] Curseur Grimoire v2 — rebuild Figma natif
+- [ ] Curseur Grimoire v2 — rebuild depuis Bibata (recoloration native)
 - [ ] Screenshots officiels Grimoire
 - [ ] GIF démo du bureau en action
 

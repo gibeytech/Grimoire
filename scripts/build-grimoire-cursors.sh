@@ -51,13 +51,13 @@ GRM_WHITE="#f8f8f2"      # outline lumineuse
 check_deps() {
     log "Vérification des dépendances..."
     local missing=()
-    for dep in convert mogrify wget xcursorgen; do
+    for dep in convert mogrify wget xcursorgen xcur2png; do
         if ! command -v "$dep" &>/dev/null; then
             missing+=("$dep")
         fi
     done
     if [[ ${#missing[@]} -gt 0 ]]; then
-        err "Dépendances manquantes : ${missing[*]}\n  → sudo pacman -S imagemagick xorg-xcursorgen wget"
+        err "Dépendances manquantes : ${missing[*]}\n  → sudo pacman -S imagemagick xorg-xcursorgen xcur2png wget"
     fi
     ok "Dépendances OK"
 }
@@ -94,84 +94,147 @@ download_source() {
 recolor_png() {
     local src="$1"
     local dst="$2"
+    local tmp="${dst}.tmp.png"
 
     # Copie de travail
-    cp "$src" "$dst"
+    cp "$src" "$tmp"
 
     # ── Passe 1 : Shift teinte globale ──────────────────────────
-    # Gruvbox : teinte dominante ~35° (orangé-beige)
-    # Grimoire : on veut pousser vers rose-violet (~330°) sur les accents
-    # et garder les neutres sombres sur base #221a1a
-    # -modulate brightness,saturation,hue (hue 100=neutre, 200=+180°)
-    # On booste légèrement la saturation (+15%) et on décale la teinte de ~20°
-    convert "$dst" \
+    magick "$tmp" \
         -modulate 95,115,94 \
-        "$dst"
+        "$tmp"
 
     # ── Passe 2 : Remplacement couleur précis ───────────────────
     # Fond sombre gruvbox → fond Grimoire
-    convert "$dst" \
+    magick "$tmp" \
         -fuzz 12% \
         -fill "$GRM_BG" -opaque "$GRV_BG" \
         -fill "$GRM_BG2" -opaque "$GRV_BG2" \
-        "$dst"
+        "$tmp"
 
     # Corps principal / FG (beige gruvbox → texte Grimoire)
-    convert "$dst" \
+    magick "$tmp" \
         -fuzz 18% \
         -fill "$GRM_FG" -opaque "$GRV_FG" \
         -fill "$GRM_WHITE" -opaque "$GRV_WHITE" \
-        "$dst"
+        "$tmp"
 
     # Orange gruvbox → orange Grimoire (secondaire)
-    convert "$dst" \
+    magick "$tmp" \
         -fuzz 20% \
         -fill "$GRM_SECONDARY" -opaque "$GRV_ORANGE" \
         -fill "$GRM_TERTIARY" -opaque "$GRV_RED" \
-        "$dst"
+        "$tmp"
 
     # Aqua/bleu gruvbox → cyan/violet Grimoire
-    convert "$dst" \
+    magick "$tmp" \
         -fuzz 20% \
         -fill "$GRM_CYAN" -opaque "$GRV_AQUA" \
         -fill "$GRM_PURPLE" -opaque "$GRV_BLUE" \
-        "$dst"
+        "$tmp"
 
     # Jaune gruvbox → primary Grimoire (rose-violet)
-    convert "$dst" \
-        -fuzz 15% \
+    magick "$tmp" \
+        -fuzz 25% \
         -fill "$GRM_PRIMARY" -opaque "$GRV_YELLOW" \
-        "$dst"
+        "$tmp"
+
+    # Déplace le résultat final vers dst
+    mv "$tmp" "$dst"
 }
 
 # ── Recoloration de tous les curseurs d'un variant ───────────────
 recolor_variant() {
-    local src_variant="$1"   # ex: themes/phinger-cursors
+    local src_variant="$1"   # ex: themes/phinger-cursors-gruvbox-material
     local dst_variant="$2"   # ex: build/phinger-cursors-grimoire
 
     log "Recoloration de $(basename "$src_variant")..."
     mkdir -p "$dst_variant/cursors"
 
-    # Copie des métadonnées (cursor config files)
-    # Les fichiers sans extension sont les configs xcursor
-    find "$src_variant/cursors" -maxdepth 1 -type f ! -name "*.png" \
-        -exec cp {} "$dst_variant/cursors/" \;
-
     # Copie des symlinks
     find "$src_variant/cursors" -maxdepth 1 -type l \
         -exec cp -P {} "$dst_variant/cursors/" \;
 
-    # Recoloration des PNGs
-    local count=0
-    while IFS= read -r -d '' png; do
-        local rel_path="${png#$src_variant/}"
-        local dst_png="$dst_variant/$rel_path"
-        mkdir -p "$(dirname "$dst_png")"
-        recolor_png "$png" "$dst_png"
-        ((count++))
-    done < <(find "$src_variant" -name "*.png" -print0)
+    # Détection : PNGs natifs ou binaires xcursor ?
+    local png_count
+    png_count=$(find "$src_variant" -name "*.png" 2>/dev/null | wc -l)
 
-    ok "$count PNGs recolorés"
+    local count=0
+
+    if [[ $png_count -gt 0 ]]; then
+        # ── Mode A : PNGs natifs ────────────────────────────────
+        find "$src_variant/cursors" -maxdepth 1 -type f ! -name "*.png" \
+            -exec cp {} "$dst_variant/cursors/" \;
+
+        while IFS= read -r -d '' png; do
+            local rel_path="${png#$src_variant/}"
+            local dst_png="$dst_variant/$rel_path"
+            mkdir -p "$(dirname "$dst_png")"
+            recolor_png "$png" "$dst_png"
+            ((count++))
+        done < <(find "$src_variant" -name "*.png" -print0)
+
+        ok "$count PNGs recolorés (mode natif)"
+
+    else
+        # ── Mode B : Binaires xcursor → xcur2png → recolor → xcursorgen ──
+        warn "Pas de PNGs natifs — pipeline xcur2png activé"
+
+        local xcur_tmp="$WORK_DIR/xcur2png_tmp"
+        rm -rf "$xcur_tmp"
+        mkdir -p "$xcur_tmp"
+
+        while IFS= read -r -d '' xcur_bin; do
+            local cursor_name
+            cursor_name=$(basename "$xcur_bin")
+
+            local cur_work="$xcur_tmp/$cursor_name"
+            mkdir -p "$cur_work"
+
+            # Extraction des PNGs depuis le binaire xcursor
+            if ! xcur2png "$xcur_bin" -d "$cur_work" 2>/dev/null; then
+                warn "xcur2png échoué sur $cursor_name — skip"
+                continue
+            fi
+
+            # Vérification qu'on a bien des PNGs
+            local extracted_count
+            extracted_count=$(find "$cur_work" -name "*.png" 2>/dev/null | wc -l)
+            if [[ $extracted_count -eq 0 ]]; then
+                warn "Aucun PNG extrait pour $cursor_name — skip"
+                continue
+            fi
+
+            # Recoloration de chaque PNG extrait
+            local png_list=()
+            while IFS= read -r -d '' png; do
+                local tmp_png="${png%.png}_recolored.png"
+                recolor_png "$png" "$tmp_png"
+                mv "$tmp_png" "$png"
+                png_list+=("$png")
+                count=$((count + 1))
+            done < <(find "$cur_work" -name "*.png" -print0)
+
+            # Génération du .cursor config pour xcursorgen
+            local cursor_cfg="$cur_work/${cursor_name}.cursor"
+            : > "$cursor_cfg"
+            for png_file in "${png_list[@]}"; do
+                local size
+                size=$(magick identify "$png_file" 2>/dev/null | awk '{print $3}' | cut -d'x' -f1)
+                [[ -z "$size" || ! "$size" =~ ^[0-9]+$ ]] && size=32
+                echo "$size 0 0 $png_file" >> "$cursor_cfg"
+            done
+
+            # Rebuild du binaire xcursor recolorié
+            local output_bin="$dst_variant/cursors/$cursor_name"
+            xcursorgen "$cursor_cfg" "$output_bin" 2>/dev/null || \
+                warn "xcursorgen échoué sur $cursor_name"
+
+        done < <(find "$src_variant/cursors" -maxdepth 1 -type f -not -type l -print0)
+
+        ok "$count PNGs recolorés et xcursors rebuildés (mode xcur2png)"
+        rm -rf "$xcur_tmp"
+    fi
 }
 
 # ── Reconstruction des fichiers xcursor ──────────────────────────
@@ -206,9 +269,8 @@ rebuild_xcursors() {
         done < <(find "$variant_dir/cursors" -name "*.cursor" -print0)
         ok "Xcursors : $built buildés, $skipped ignorés"
     else
-        warn "Pas de .cursor configs trouvés — les binaires xcursor source sont conservés"
-        warn "Les PNGs ont été recolorés mais les binaires nécessitent un rebuild manuel"
-        warn "→ Voir section 'rebuild manuel' dans le README généré"
+        # Mode B géré directement dans recolor_variant (xcur2png pipeline)
+        ok "Xcursors rebuildés via pipeline xcur2png"
     fi
 }
 

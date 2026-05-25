@@ -74,4 +74,7 @@ hl.config({
 		force_default_wallpaper = -1,
 		disable_hyprland_logo = true,
 	},
+	cursor = {
+		no_hardware_cursors = true,
+	},
 })
