@@ -18,6 +18,14 @@
 
 ---
 
+## 📸 Aperçu
+
+<div align="center">
+  <img src="assets/screenshot-fastfetch.png" width="800" />
+</div>
+
+---
+
 ## 🔮 À propos
 
 **Grimoire** est une configuration Hyprland complète, écrite entièrement en **Lua**, documentée en français et pensée pour la communauté francophone Linux.
