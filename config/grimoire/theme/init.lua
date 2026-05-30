@@ -5,3 +5,5 @@ Theme = {
     palette = Palette,
     tokens = Tokens,
 }
+
+require("theme.exporters.waybar")

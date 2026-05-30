@@ -1,11 +1,13 @@
+
+@import "colors.css";
 * {
   font-family: "JetBrainsMono Nerd Font";
   font-size: 13px;
 }
 
 window#waybar {
-  background: rgba(20, 20, 24, 0.92);
-  color: #ffffff;
+  background-color:@background;
+  color: @text;
 }
 
 #workspaces button {
@@ -16,7 +18,7 @@ window#waybar {
 }
 
 #workspaces button.active {
-  color: #e0789a;
+  color: @accent;
 }
 
 #clock,
