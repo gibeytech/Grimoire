@@ -1,3 +1,6 @@
-require("core.options")
 require("core.env")
+require("core.options")
+require("core.animations")
+require("core.layouts")
+require("core.permissions")
 require("core.autostart")
