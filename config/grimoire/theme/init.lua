@@ -7,3 +7,4 @@ Theme = {
 }
 
 require("theme.exporters.waybar")
+require("theme.exporters.wlogout")
