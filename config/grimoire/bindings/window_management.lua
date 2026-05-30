@@ -2,7 +2,7 @@ local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 
-hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 

@@ -4,4 +4,4 @@ require("bindings.workspaces")
 require("bindings.screenshots")
 require("bindings.media")
 require("bindings.system")
-
+require("bindings.clipboard")
