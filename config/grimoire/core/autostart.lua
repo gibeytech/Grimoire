@@ -1,3 +1,4 @@
 hl.on("hyprland.start", function()
     hl.exec_cmd("swaync")
+    hl.exec_cmd("waybar >/dev/null 2>&1")
 end)
