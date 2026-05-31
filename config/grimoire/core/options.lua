@@ -1,76 +1,31 @@
+local desktop = Config.desktop
+
 hl.config({
-    input = {
-        kb_layout = "fr",
-        kb_variant = "",
-        kb_model = "",
-        kb_options = "",
-        kb_rules = "",
-
-        follow_mouse = 1,
-        sensitivity = 0,
-
-        touchpad = {
-            natural_scroll = false,
-        },
-    },
+    input = desktop.input,
 
     general = {
-        gaps_in = 5,
-        gaps_out = 20,
+        gaps_in = desktop.general.gaps_in,
+        gaps_out = desktop.general.gaps_out,
 
-        border_size = 2,
+        border_size = desktop.general.border_size,
 
         col = {
-            active_border = {
-                colors = {
-                    "rgba(33ccffee)",
-                    "rgba(00ff99ee)"
-                },
-                angle = 45
-            },
-
-            inactive_border = "rgba(595959aa)",
+            active_border = desktop.general.active_border,
+            inactive_border = desktop.general.inactive_border,
         },
 
-        resize_on_border = false,
-        allow_tearing = false,
-        layout = "dwindle",
+        resize_on_border = desktop.general.resize_on_border,
+        allow_tearing = desktop.general.allow_tearing,
+        layout = desktop.general.layout,
     },
 
-    decoration = {
-        rounding = 10,
-        rounding_power = 2,
+    decoration = desktop.decoration,
 
-        active_opacity = 1.0,
-        inactive_opacity = 1.0,
-
-        shadow = {
-            enabled = true,
-            range = 4,
-            render_power = 3,
-            color = 0xee1a1a1a,
-        },
-
-        blur = {
-            enabled = true,
-            size = 3,
-            passes = 1,
-            vibrancy = 0.1696,
-        },
-    },
-
-    animations = {
-        enabled = true,
-    },
+    animations = desktop.animations,
 })
 
-hl.gesture({
-    fingers = 3,
-    direction = "horizontal",
-    action = "workspace"
-})
+hl.gesture(desktop.gesture)
 
-hl.device({
-    name = "epic-mouse-v1",
-    sensitivity = -0.5,
-})
+for _, device in ipairs(desktop.devices) do
+    hl.device(device)
+end
