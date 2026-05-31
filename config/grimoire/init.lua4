@@ -1,7 +1,0 @@
-require("core")
-require("theme")
-require("workflow")
-require("bindings")
-require("hardware")
-require("user")
-
