@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="none"/>
-  <!-- Arc rotation -->
-  <path d="M46 20 A20 20 0 1 0 48 36" fill="none" stroke="#e0789a" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Flèche rotation -->
-  <polyline points="46,12 46,21 55,21" fill="none" stroke="#e0789a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Brillance -->
-  <circle cx="46" cy="21" r="2.5" fill="#ffb86c" opacity="0.6"/>
-</svg>

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="none"/>
-  <!-- Arc cercle puissance -->
-  <path d="M20 18 A20 20 0 1 0 44 18" fill="none" stroke="#e0789a" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Trait vertical -->
-  <line x1="32" y1="10" x2="32" y2="34" stroke="#e0789a" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- Brillance centre -->
-  <circle cx="32" cy="34" r="2.5" fill="#ffb86c" opacity="0.6"/>
-</svg>

@@ -1,0 +1,59 @@
+* {
+    bg:      #221a1a;
+    surface: #2d2020;
+    text:    #f8f8f2;
+    accent:  #e0789a;
+
+    background-color: transparent;
+    text-color: @text;
+}
+
+window {
+    width: 45%;
+    border: 2px;
+    border-color: @accent;
+    border-radius: 12px;
+    background-color: @bg;
+}
+
+mainbox {
+    padding: 12px;
+    background-color: @bg;
+}
+
+inputbar {
+    padding: 10px;
+    border-radius: 8px;
+    background-color: @surface;
+}
+
+prompt {
+    text-color: @accent;
+}
+
+entry {
+    placeholder: "Rechercher...";
+    text-color: @text;
+}
+
+listview {
+    lines: 10;
+    padding: 8px 0;
+    background-color: @bg;
+}
+
+element {
+    padding: 8px;
+    border-radius: 8px;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @bg;
+}
+
+element-text,
+element-icon {
+    background-color: inherit;
+    text-color: inherit;
+}

@@ -1,0 +1,8 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    font: "JetBrainsMono Nerd Font 13";
+    drun-display-format: "{name}";
+}
+
+@theme "theme"
