@@ -4,6 +4,11 @@ local Profiles = require("packaging.profiles")
 local Catalogue = require("packaging.catalogue")
 local Layers = require("packaging.layers")
 
+local aur_packages = {
+    ["brave-bin"] = true,
+    ["visual-studio-code-bin"] = true,
+}
+
 function Setup.new(profile, options)
     options = options or {}
 
@@ -29,10 +34,7 @@ function Setup.new(profile, options)
             Layers.developer.profiles[options.developer]
 
         if not developer_profile then
-            error(
-                "Unknown developer profile: "
-                    .. tostring(options.developer)
-            )
+            error("Unknown developer profile: " .. tostring(options.developer))
         end
 
         config.layers.developer = developer_profile
@@ -43,10 +45,7 @@ function Setup.new(profile, options)
             Layers.containers.choices[options.containers]
 
         if not container_choice then
-            error(
-                "Unknown container choice: "
-                    .. tostring(options.containers)
-            )
+            error("Unknown container choice: " .. tostring(options.containers))
         end
 
         config.layers.containers = container_choice
@@ -57,10 +56,7 @@ function Setup.new(profile, options)
             Layers.virtualization.choices[options.virtualization]
 
         if not virtualization_choice then
-            error(
-                "Unknown virtualization choice: "
-                    .. tostring(options.virtualization)
-            )
+            error("Unknown virtualization choice: " .. tostring(options.virtualization))
         end
 
         config.layers.virtualization = virtualization_choice
@@ -72,25 +68,32 @@ end
 function Setup.list_packages(config)
     local packages = {}
 
-    for _, component in pairs(config) do
-        if type(component) == "table" and component.package then
+    local components = {
+        config.terminal,
+        config.shell,
+        config.browser,
+        config.editor,
+    }
+
+    for _, component in ipairs(components) do
+        if component and component.package then
             table.insert(packages, component.package)
         end
     end
 
-    if config.layers and config.layers.developer then
+    if config.layers.developer then
         for _, package in ipairs(config.layers.developer.tools) do
             table.insert(packages, package)
         end
     end
 
-    if config.layers and config.layers.containers then
+    if config.layers.containers then
         for _, package in ipairs(config.layers.containers.packages) do
             table.insert(packages, package)
         end
     end
 
-    if config.layers and config.layers.virtualization then
+    if config.layers.virtualization then
         for _, package in ipairs(config.layers.virtualization.packages) do
             table.insert(packages, package)
         end
@@ -99,14 +102,9 @@ function Setup.list_packages(config)
     return packages
 end
 
-function Setup.install_command(config)
+function Setup.split_packages(config)
     local official = {}
     local aur = {}
-
-    local aur_packages = {
-        ["brave-bin"] = true,
-        ["visual-studio-code-bin"] = true,
-    }
 
     for _, package in ipairs(Setup.list_packages(config)) do
         if aur_packages[package] then
@@ -116,20 +114,22 @@ function Setup.install_command(config)
         end
     end
 
+    return {
+        official = official,
+        aur = aur,
+    }
+end
+
+function Setup.install_command(config)
+    local split = Setup.split_packages(config)
     local commands = {}
 
-    if #official > 0 then
-        table.insert(
-            commands,
-            "sudo pacman -S " .. table.concat(official, " ")
-        )
+    if #split.official > 0 then
+        table.insert(commands, "sudo pacman -S " .. table.concat(split.official, " "))
     end
 
-    if #aur > 0 then
-        table.insert(
-            commands,
-            "yay -S " .. table.concat(aur, " ")
-        )
+    if #split.aur > 0 then
+        table.insert(commands, "yay -S " .. table.concat(split.aur, " "))
     end
 
     return table.concat(commands, "\n")
@@ -164,12 +164,6 @@ function Setup.summary(config)
         table.insert(lines, "Virtualization Layer")
         table.insert(lines, "- " .. config.layers.virtualization.name)
         table.insert(lines, "")
-    end
-
-    table.insert(lines, "Packages")
-
-    for _, package in ipairs(Setup.list_packages(config)) do
-        table.insert(lines, "- " .. package)
     end
 
     return table.concat(lines, "\n")
