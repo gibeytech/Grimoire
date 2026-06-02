@@ -3,16 +3,19 @@ local Catalogue = {}
 Catalogue.terminals = {
     ghostty = {
         name = "Ghostty",
+        package = "ghostty",
         recommended = true,
     },
 
     kitty = {
         name = "Kitty",
+        package = "kitty",
         recommended = false,
     },
 
     alacritty = {
         name = "Alacritty",
+        package = "alacritty",
         recommended = false,
     },
 }
@@ -20,16 +23,19 @@ Catalogue.terminals = {
 Catalogue.shells = {
     fish = {
         name = "Fish",
+        package = "fish",
         recommended = true,
     },
 
     zsh = {
         name = "Zsh",
+        package = "zsh",
         recommended = false,
     },
 
     bash = {
         name = "Bash",
+        package = "bash",
         recommended = false,
     },
 }
@@ -37,16 +43,19 @@ Catalogue.shells = {
 Catalogue.browsers = {
     brave = {
         name = "Brave",
+        package = "brave-bin",
         recommended = true,
     },
 
     firefox = {
         name = "Firefox",
+        package = "firefox",
         recommended = false,
     },
 
     chromium = {
         name = "Chromium",
+        package = "chromium",
         recommended = false,
     },
 }
@@ -54,16 +63,19 @@ Catalogue.browsers = {
 Catalogue.editors = {
     vscode = {
         name = "VSCode",
+        package = "visual-studio-code-bin",
         recommended = true,
     },
 
     neovim = {
         name = "Neovim",
+        package = "neovim",
         recommended = false,
     },
 
     zed = {
         name = "Zed",
+        package = "zed",
         recommended = false,
     },
 }

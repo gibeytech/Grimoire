@@ -20,5 +20,16 @@ function Setup.new(profile)
     }
 end
 
-return Setup
+function Setup.list_packages(config)
+    local packages = {}
 
+    for _, component in pairs(config) do
+        if type(component) == "table" and component.package then
+            table.insert(packages, component.package)
+        end
+    end
+
+    return packages
+end
+
+return Setup
