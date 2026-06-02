@@ -63,13 +63,33 @@ Layers.containers = {
         },
     },
 }
+
 Layers.virtualization = {
     enabled = false,
 
     choices = {
-        "virt-manager",
-        "gnome-boxes",
-        "none",
+        virt_manager = {
+            name = "Virt-Manager",
+            packages = {
+                "virt-manager",
+                "qemu-full",
+                "libvirt",
+                "dnsmasq",
+                "bridge-utils",
+            },
+        },
+
+        gnome_boxes = {
+            name = "GNOME Boxes",
+            packages = {
+                "gnome-boxes",
+            },
+        },
+
+        none = {
+            name = "Aucun",
+            packages = {},
+        },
     },
 }
 

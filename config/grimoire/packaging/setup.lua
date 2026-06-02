@@ -52,6 +52,20 @@ function Setup.new(profile, options)
         config.layers.containers = container_choice
     end
 
+    if options.virtualization then
+        local virtualization_choice =
+            Layers.virtualization.choices[options.virtualization]
+
+        if not virtualization_choice then
+            error(
+                "Unknown virtualization choice: "
+                    .. tostring(options.virtualization)
+            )
+        end
+
+        config.layers.virtualization = virtualization_choice
+    end
+
     return config
 end
 
@@ -72,6 +86,12 @@ function Setup.list_packages(config)
 
     if config.layers and config.layers.containers then
         for _, package in ipairs(config.layers.containers.packages) do
+            table.insert(packages, package)
+        end
+    end
+
+    if config.layers and config.layers.virtualization then
+        for _, package in ipairs(config.layers.virtualization.packages) do
             table.insert(packages, package)
         end
     end
