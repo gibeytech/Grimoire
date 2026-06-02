@@ -1,0 +1,73 @@
+# Roadmap actuelle — Grimoire V2
+
+## Terminé
+
+* Desktop Core
+* Workflow Core
+* Theme Layer
+* Configuration Layer
+* Nettoyage architectural V2
+* Packaging Layer — phase vision
+* Packaging Layer — phase spécification
+
+## En cours
+
+### Milestone 5 — Packaging Layer
+
+Phase actuelle :
+
+```text
+Implémentation Lua
+```
+
+Objectifs immédiats :
+
+1. Créer la structure technique du Packaging Layer
+2. Créer un premier catalogue Lua minimal
+3. Créer les profils Lua
+4. Préparer `config.setup()`
+5. Tester avec un profil simple
+
+## Prochaine session
+
+### Étape 1
+
+Créer la structure :
+
+```text
+config/grimoire/packaging/
+├── init.lua
+├── catalogue.lua
+├── profiles.lua
+└── layers.lua
+```
+
+### Étape 2
+
+Créer un premier catalogue minimal :
+
+* terminals
+* shells
+* browsers
+* editors
+
+### Étape 3
+
+Créer les profils :
+
+* beginner
+* advanced
+* custom
+
+### Étape 4
+
+Commencer le prototype de `config.setup()`
+
+## Hors périmètre immédiat
+
+* TUI
+* installateur final
+* polish graphique
+* Quickshell
+* profil GibeyTech complet
+* support multi-distribution

@@ -1,0 +1,414 @@
+# Grimoire V2 — MASTER
+
+> Document de référence principal du projet Grimoire V2.
+>
+> Ce document décrit la vision, la philosophie, l'architecture et l'état actuel du projet.
+>
+> Les autres documents du dépôt doivent être considérés comme des documents de travail ou des approfondissements de ce document.
+
+---
+
+# 1. Identité du projet
+
+Grimoire V2 est un environnement Hyprland modulaire conçu pour permettre à un utilisateur Linux de construire progressivement son propre workflow.
+
+L'objectif n'est pas de fournir une configuration spectaculaire.
+
+L'objectif est de fournir une expérience cohérente, documentée et maintenable.
+
+---
+
+# 2. Pourquoi Grimoire existe
+
+Grimoire existe pour résoudre un problème simple :
+
+Lorsque l'on découvre Hyprland, il est souvent difficile de comprendre :
+
+* quoi installer ;
+* comment l'installer ;
+* pourquoi certains choix sont faits ;
+* comment faire évoluer son environnement.
+
+Grimoire cherche à fournir ce que son créateur aurait aimé trouver lors de sa découverte de Hyprland.
+
+---
+
+# 3. Public visé
+
+Le cœur de cible de Grimoire est :
+
+```text
+Utilisateur Linux
++
+Découverte de Hyprland
+```
+
+Grimoire n'est pas réservé aux experts.
+
+Grimoire n'est pas non plus conçu pour masquer le fonctionnement du système.
+
+L'objectif est d'accompagner la progression de l'utilisateur.
+
+---
+
+# 4. Philosophie
+
+## Workflow avant esthétique
+
+L'efficacité prime sur l'effet visuel.
+
+---
+
+## Comprendre avant automatiser
+
+L'utilisateur doit pouvoir comprendre les composants qui composent son environnement.
+
+---
+
+## Architecture avant implémentation
+
+La cohérence du projet est plus importante que l'accumulation de fonctionnalités.
+
+---
+
+## Modularité
+
+Chaque composant doit pouvoir évoluer indépendamment.
+
+---
+
+## Reproductibilité
+
+Une installation doit pouvoir être reconstruite à partir d'une configuration unique.
+
+---
+
+# 5. Structure générale
+
+Grimoire V2 est organisé autour de plusieurs couches.
+
+```text
+Desktop Core
+↓
+Workflow Core
+↓
+Theme Layer
+↓
+Configuration Layer
+↓
+Packaging Layer
+```
+
+---
+
+# 6. Desktop Core
+
+Le Desktop Core contient les composants fondamentaux nécessaires au fonctionnement de l'environnement.
+
+Exemples :
+
+* Hyprland
+* Waybar
+* Rofi
+* SwayNC
+* Hyprlock
+* Hypridle
+
+---
+
+# 7. Workflow Core
+
+Le Workflow Core définit les interactions principales de l'utilisateur.
+
+Exemples :
+
+* raccourcis clavier
+* comportements des fenêtres
+* navigation
+* lancement des applications
+
+---
+
+# 8. Theme Layer
+
+Le Theme Layer centralise les éléments visuels du système.
+
+Objectifs :
+
+* cohérence visuelle ;
+* maintenance simplifiée ;
+* personnalisation future.
+
+Composants principaux :
+
+* palette
+* tokens
+* thèmes applicatifs
+
+---
+
+# 9. Configuration Layer
+
+Le Configuration Layer permet de gérer les paramètres utilisateur de manière centralisée.
+
+Objectif :
+
+Éviter la duplication de configuration dans les différents composants du projet.
+
+---
+
+# 10. Packaging Layer
+
+Le Packaging Layer permet de construire une installation adaptée aux besoins de l'utilisateur.
+
+Il constitue l'une des principales innovations de la V2.
+
+---
+
+## Philosophie
+
+Grimoire fournit un cadre.
+
+L'utilisateur construit son environnement.
+
+---
+
+## Structure
+
+Une installation est décrite par :
+
+```text
+Base
+↓
+Profil
+↓
+Layers
+↓
+Choix utilisateur
+```
+
+---
+
+# 11. Base
+
+La Base est installée dans toutes les configurations.
+
+Elle contient :
+
+## Outils système
+
+* Git
+* OpenSSH
+
+## Desktop Core
+
+* composants fondamentaux de Grimoire
+
+---
+
+# 12. Profils utilisateur
+
+Trois profils officiels sont définis.
+
+## Débutant
+
+Objectif :
+
+Découvrir Hyprland rapidement.
+
+Peu ou pas de configuration.
+
+---
+
+## Avancé
+
+Objectif :
+
+Personnaliser les choix les plus importants.
+
+---
+
+## Personnalisé
+
+Objectif :
+
+Contrôle complet du catalogue.
+
+---
+
+# 13. Layers
+
+Les Layers sont indépendants du profil.
+
+Ils ajoutent des capacités spécifiques.
+
+---
+
+## Developer Layer
+
+Profils disponibles :
+
+* Python Developer
+* Web Developer
+* Rust Developer
+* Go Developer
+* Java Developer
+* Full Stack Developer
+* Custom Developer
+
+---
+
+## Container Layer
+
+Choix disponibles :
+
+* Docker
+* Podman
+* Aucun
+
+---
+
+## Virtualization Layer
+
+Choix disponibles :
+
+* Virt-Manager
+* GNOME Boxes
+* Aucun
+
+---
+
+## Homelab Layer
+
+Prévu pour une version future.
+
+---
+
+# 14. Catalogue Grimoire
+
+Le catalogue définit les applications officiellement supportées par le projet.
+
+Principes :
+
+* nombre de choix limité ;
+* maintenance raisonnable ;
+* documentation possible ;
+* cohérence avant quantité.
+
+Le catalogue est volontairement restreint.
+
+---
+
+# 15. Configuration
+
+À terme, toute installation devra pouvoir être représentée par :
+
+```lua
+config.setup({
+    profile = "beginner"
+})
+```
+
+ou
+
+```lua
+config.setup({
+    profile = "custom",
+    ...
+})
+```
+
+La configuration constitue le contrat principal entre :
+
+* l'utilisateur ;
+* les profils ;
+* les layers ;
+* le catalogue ;
+* l'installateur.
+
+---
+
+# 16. Installateur
+
+L'installateur suit le parcours :
+
+```text
+Bienvenue
+↓
+Profil
+↓
+Layers
+↓
+Personnalisation
+↓
+Résumé
+↓
+Installation
+```
+
+La complexité n'apparaît que lorsque l'utilisateur la demande.
+
+---
+
+# 17. Profil GibeyTech
+
+Le profil personnel du créateur n'appartient pas au cœur du projet.
+
+Il sert de profil de validation et de terrain d'expérimentation.
+
+Il est destiné à être maintenu dans un dépôt séparé afin de conserver une séparation claire entre :
+
+```text
+Grimoire
+↓
+plateforme
+
+GibeyTech
+↓
+workflow personnel
+```
+
+---
+
+# 18. État actuel du projet
+
+## Terminé
+
+* Desktop Core
+* Workflow Core
+* Theme Layer
+* Configuration Layer
+* Conception du Packaging Layer
+
+## En cours
+
+* Implémentation Lua du Packaging Layer
+
+Objectifs :
+
+* catalogue.lua
+* profiles.lua
+* layers.lua
+* config.setup()
+
+---
+
+# 19. Vision long terme
+
+Grimoire doit permettre :
+
+* l'apprentissage ;
+* la personnalisation progressive ;
+* la reproductibilité ;
+* la maintenance sur le long terme.
+
+Le projet privilégie la cohérence et la compréhension plutôt que l'accumulation de fonctionnalités.
+
+---
+
+# Résumé
+
+Grimoire n'est pas une simple configuration Hyprland.
+
+Grimoire est une plateforme permettant à chacun de construire progressivement son propre environnement Linux moderne.
+
