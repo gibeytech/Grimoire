@@ -13,6 +13,12 @@ Profiles.advanced = {
     browser = "brave",
     editor = "neovim",
 }
+Profiles.gibeytech = {
+    terminal = "ghostty",
+    shell = "fish",
+    browser = "brave",
+    editor = "neovim",
+}
 
 Profiles.custom = {}
 
