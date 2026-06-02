@@ -99,4 +99,44 @@ function Setup.list_packages(config)
     return packages
 end
 
+function Setup.summary(config)
+    local lines = {}
+
+    table.insert(lines, "Profile : " .. config.profile)
+    table.insert(lines, "")
+
+    table.insert(lines, "Applications")
+    table.insert(lines, "- " .. config.terminal.name)
+    table.insert(lines, "- " .. config.shell.name)
+    table.insert(lines, "- " .. config.browser.name)
+    table.insert(lines, "- " .. config.editor.name)
+    table.insert(lines, "")
+
+    if config.layers.developer then
+        table.insert(lines, "Developer Layer")
+        table.insert(lines, "- " .. config.layers.developer.name)
+        table.insert(lines, "")
+    end
+
+    if config.layers.containers then
+        table.insert(lines, "Container Layer")
+        table.insert(lines, "- " .. config.layers.containers.name)
+        table.insert(lines, "")
+    end
+
+    if config.layers.virtualization then
+        table.insert(lines, "Virtualization Layer")
+        table.insert(lines, "- " .. config.layers.virtualization.name)
+        table.insert(lines, "")
+    end
+
+    table.insert(lines, "Packages")
+
+    for _, package in ipairs(Setup.list_packages(config)) do
+        table.insert(lines, "- " .. package)
+    end
+
+    return table.concat(lines, "\n")
+end
+
 return Setup
