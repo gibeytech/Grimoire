@@ -99,6 +99,42 @@ function Setup.list_packages(config)
     return packages
 end
 
+function Setup.install_command(config)
+    local official = {}
+    local aur = {}
+
+    local aur_packages = {
+        ["brave-bin"] = true,
+        ["visual-studio-code-bin"] = true,
+    }
+
+    for _, package in ipairs(Setup.list_packages(config)) do
+        if aur_packages[package] then
+            table.insert(aur, package)
+        else
+            table.insert(official, package)
+        end
+    end
+
+    local commands = {}
+
+    if #official > 0 then
+        table.insert(
+            commands,
+            "sudo pacman -S " .. table.concat(official, " ")
+        )
+    end
+
+    if #aur > 0 then
+        table.insert(
+            commands,
+            "yay -S " .. table.concat(aur, " ")
+        )
+    end
+
+    return table.concat(commands, "\n")
+end
+
 function Setup.summary(config)
     local lines = {}
 
