@@ -57,9 +57,33 @@ function Execute.confirmation(config)
     table.insert(lines, "Commands:")
     table.insert(lines, Packaging.setup.install_command(config))
     table.insert(lines, "")
-
     table.insert(lines, "No command has been executed yet.")
     table.insert(lines, "This is only a confirmation preview.")
+
+    return table.concat(lines, "\n")
+end
+
+function Execute.install(config)
+    assert_valid(config)
+
+    local lines = {}
+
+    table.insert(lines, "=================================")
+    table.insert(lines, "      Grimoire V2 Install")
+    table.insert(lines, "=================================")
+    table.insert(lines, "")
+
+    table.insert(lines, "Validation : OK")
+    table.insert(lines, "Confirmation : OK")
+    table.insert(lines, "")
+
+    table.insert(lines, "Simulation mode enabled.")
+    table.insert(lines, "No package has been installed.")
+    table.insert(lines, "")
+    table.insert(lines, "Next milestone:")
+    table.insert(lines, "- interactive confirmation")
+    table.insert(lines, "- package installation")
+    table.insert(lines, "- post-install hooks")
 
     return table.concat(lines, "\n")
 end
