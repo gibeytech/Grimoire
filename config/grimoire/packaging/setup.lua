@@ -6,6 +6,10 @@ local Catalogue = require("packaging.catalogue")
 function Setup.new(profile)
     local profile_data = Profiles[profile]
 
+    if not profile_data then
+        error("Unknown profile: " .. tostring(profile))
+    end
+
     return {
         profile = profile,
 
@@ -17,3 +21,4 @@ function Setup.new(profile)
 end
 
 return Setup
+
