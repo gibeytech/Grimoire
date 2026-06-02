@@ -25,13 +25,31 @@ function Setup.new(profile, options)
     }
 
     if options.developer then
-        local developer_profile = Layers.developer.profiles[options.developer]
+        local developer_profile =
+            Layers.developer.profiles[options.developer]
 
         if not developer_profile then
-            error("Unknown developer profile: " .. tostring(options.developer))
+            error(
+                "Unknown developer profile: "
+                    .. tostring(options.developer)
+            )
         end
 
         config.layers.developer = developer_profile
+    end
+
+    if options.containers then
+        local container_choice =
+            Layers.containers.choices[options.containers]
+
+        if not container_choice then
+            error(
+                "Unknown container choice: "
+                    .. tostring(options.containers)
+            )
+        end
+
+        config.layers.containers = container_choice
     end
 
     return config
@@ -48,6 +66,12 @@ function Setup.list_packages(config)
 
     if config.layers and config.layers.developer then
         for _, package in ipairs(config.layers.developer.tools) do
+            table.insert(packages, package)
+        end
+    end
+
+    if config.layers and config.layers.containers then
+        for _, package in ipairs(config.layers.containers.packages) do
             table.insert(packages, package)
         end
     end

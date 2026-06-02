@@ -42,12 +42,27 @@ Layers.containers = {
     enabled = false,
 
     choices = {
-        "docker",
-        "podman",
-        "none",
+        docker = {
+            name = "Docker",
+            packages = {
+                "docker",
+                "docker-compose",
+            },
+        },
+
+        podman = {
+            name = "Podman",
+            packages = {
+                "podman",
+            },
+        },
+
+        none = {
+            name = "Aucun",
+            packages = {},
+        },
     },
 }
-
 Layers.virtualization = {
     enabled = false,
 
