@@ -3,7 +3,6 @@ local Setup = {}
 local Profiles = require("packaging.profiles")
 local Catalogue = require("packaging.catalogue")
 local Layers = require("packaging.layers")
-local Core = require("packaging.core")
 
 local aur_packages = {
     ["brave-bin"] = true,
@@ -43,10 +42,7 @@ function Setup.new(profile, options)
     local config = {
         profile = profile,
 
-        core = Core.packages,
-
         terminal = Catalogue.terminals[profile_data.terminal],
-
         extra_terminals = resolve_extra_items(
             Catalogue.terminals,
             profile_data.extra_terminals,
@@ -57,7 +53,6 @@ function Setup.new(profile, options)
         browser = Catalogue.browsers[profile_data.browser],
 
         editor = Catalogue.editors[profile_data.editor],
-
         extra_editors = resolve_extra_items(
             Catalogue.editors,
             profile_data.extra_editors,
@@ -108,12 +103,6 @@ end
 function Setup.list_packages(config)
     local packages = {}
 
-    -- Core
-    for _, component in ipairs(config.core) do
-        table.insert(packages, component.package)
-    end
-
-    -- Profil
     local components = {
         config.terminal,
         config.shell,
@@ -130,17 +119,20 @@ function Setup.list_packages(config)
 
     if config.extra_terminals then
         for _, terminal in ipairs(config.extra_terminals) do
-            table.insert(packages, terminal.package)
+            if terminal.package then
+                table.insert(packages, terminal.package)
+            end
         end
     end
 
     if config.extra_editors then
         for _, editor in ipairs(config.extra_editors) do
-            table.insert(packages, editor.package)
+            if editor.package then
+                table.insert(packages, editor.package)
+            end
         end
     end
 
-    -- Layers
     if config.layers.developer then
         for _, package in ipairs(config.layers.developer.tools) do
             table.insert(packages, package)
@@ -185,13 +177,11 @@ function Setup.install_command(config)
     local commands = {}
 
     if #split.official > 0 then
-        table.insert(commands,
-            "sudo pacman -S " .. table.concat(split.official, " "))
+        table.insert(commands, "sudo pacman -S " .. table.concat(split.official, " "))
     end
 
     if #split.aur > 0 then
-        table.insert(commands,
-            "yay -S " .. table.concat(split.aur, " "))
+        table.insert(commands, "yay -S " .. table.concat(split.aur, " "))
     end
 
     return table.concat(commands, "\n")
@@ -202,26 +192,49 @@ function Setup.summary(config)
 
     table.insert(lines, "Profile : " .. config.profile)
     table.insert(lines, "")
-    table.insert(lines, "Core : " .. tostring(#config.core) .. " packages")
-    table.insert(lines, "")
 
     table.insert(lines, "Applications")
-
     table.insert(lines, "- " .. config.terminal.name)
 
-    for _, terminal in ipairs(config.extra_terminals) do
-        table.insert(lines, "- " .. terminal.name)
+    if config.extra_terminals then
+        for _, terminal in ipairs(config.extra_terminals) do
+            table.insert(lines, "- " .. terminal.name)
+        end
     end
 
     table.insert(lines, "- " .. config.shell.name)
     table.insert(lines, "- " .. config.browser.name)
     table.insert(lines, "- " .. config.editor.name)
 
-    for _, editor in ipairs(config.extra_editors) do
-        table.insert(lines, "- " .. editor.name)
+    if config.extra_editors then
+        for _, editor in ipairs(config.extra_editors) do
+            table.insert(lines, "- " .. editor.name)
+        end
     end
 
-    table.insert(lines, "- " .. config.organization.name)
+    if config.organization then
+        table.insert(lines, "- " .. config.organization.name)
+    end
+
+    table.insert(lines, "")
+
+    if config.layers.developer then
+        table.insert(lines, "Developer Layer")
+        table.insert(lines, "- " .. config.layers.developer.name)
+        table.insert(lines, "")
+    end
+
+    if config.layers.containers then
+        table.insert(lines, "Container Layer")
+        table.insert(lines, "- " .. config.layers.containers.name)
+        table.insert(lines, "")
+    end
+
+    if config.layers.virtualization then
+        table.insert(lines, "Virtualization Layer")
+        table.insert(lines, "- " .. config.layers.virtualization.name)
+        table.insert(lines, "")
+    end
 
     return table.concat(lines, "\n")
 end
