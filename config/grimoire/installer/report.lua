@@ -20,6 +20,13 @@ function Report.generate(config)
     table.insert(lines, "Applications")
     table.insert(lines, "------------")
     table.insert(lines, config.terminal.name)
+
+    if config.extra_terminals then
+        for _, terminal in ipairs(config.extra_terminals) do
+            table.insert(lines, terminal.name)
+        end
+    end
+
     table.insert(lines, config.shell.name)
     table.insert(lines, config.browser.name)
     table.insert(lines, config.editor.name)

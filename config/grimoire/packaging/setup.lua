@@ -10,6 +10,26 @@ local aur_packages = {
     ["joplin-appimage"] = true,
 }
 
+local function resolve_extra_terminals(profile_data)
+    local terminals = {}
+
+    if not profile_data.extra_terminals then
+        return terminals
+    end
+
+    for _, terminal_key in ipairs(profile_data.extra_terminals) do
+        local terminal = Catalogue.terminals[terminal_key]
+
+        if not terminal then
+            error("Unknown extra terminal: " .. tostring(terminal_key))
+        end
+
+        table.insert(terminals, terminal)
+    end
+
+    return terminals
+end
+
 function Setup.new(profile, options)
     options = options or {}
 
@@ -23,6 +43,8 @@ function Setup.new(profile, options)
         profile = profile,
 
         terminal = Catalogue.terminals[profile_data.terminal],
+        extra_terminals = resolve_extra_terminals(profile_data),
+
         shell = Catalogue.shells[profile_data.shell],
         browser = Catalogue.browsers[profile_data.browser],
         editor = Catalogue.editors[profile_data.editor],
@@ -81,6 +103,14 @@ function Setup.list_packages(config)
     for _, component in ipairs(components) do
         if component and component.package then
             table.insert(packages, component.package)
+        end
+    end
+
+    if config.extra_terminals then
+        for _, terminal in ipairs(config.extra_terminals) do
+            if terminal.package then
+                table.insert(packages, terminal.package)
+            end
         end
     end
 
@@ -146,6 +176,13 @@ function Setup.summary(config)
 
     table.insert(lines, "Applications")
     table.insert(lines, "- " .. config.terminal.name)
+
+    if config.extra_terminals then
+        for _, terminal in ipairs(config.extra_terminals) do
+            table.insert(lines, "- " .. terminal.name)
+        end
+    end
+
     table.insert(lines, "- " .. config.shell.name)
     table.insert(lines, "- " .. config.browser.name)
     table.insert(lines, "- " .. config.editor.name)
