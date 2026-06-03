@@ -31,6 +31,12 @@ function Report.generate(config)
     table.insert(lines, config.browser.name)
     table.insert(lines, config.editor.name)
 
+    if config.extra_editors then
+        for _, editor in ipairs(config.extra_editors) do
+            table.insert(lines, editor.name)
+        end
+    end
+
     if config.organization then
         table.insert(lines, config.organization.name)
     end

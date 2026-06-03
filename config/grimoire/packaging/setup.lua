@@ -10,24 +10,24 @@ local aur_packages = {
     ["joplin-appimage"] = true,
 }
 
-local function resolve_extra_terminals(profile_data)
-    local terminals = {}
+local function resolve_extra_items(source, keys, error_label)
+    local items = {}
 
-    if not profile_data.extra_terminals then
-        return terminals
+    if not keys then
+        return items
     end
 
-    for _, terminal_key in ipairs(profile_data.extra_terminals) do
-        local terminal = Catalogue.terminals[terminal_key]
+    for _, key in ipairs(keys) do
+        local item = source[key]
 
-        if not terminal then
-            error("Unknown extra terminal: " .. tostring(terminal_key))
+        if not item then
+            error("Unknown " .. error_label .. ": " .. tostring(key))
         end
 
-        table.insert(terminals, terminal)
+        table.insert(items, item)
     end
 
-    return terminals
+    return items
 end
 
 function Setup.new(profile, options)
@@ -43,11 +43,22 @@ function Setup.new(profile, options)
         profile = profile,
 
         terminal = Catalogue.terminals[profile_data.terminal],
-        extra_terminals = resolve_extra_terminals(profile_data),
+        extra_terminals = resolve_extra_items(
+            Catalogue.terminals,
+            profile_data.extra_terminals,
+            "extra terminal"
+        ),
 
         shell = Catalogue.shells[profile_data.shell],
         browser = Catalogue.browsers[profile_data.browser],
+
         editor = Catalogue.editors[profile_data.editor],
+        extra_editors = resolve_extra_items(
+            Catalogue.editors,
+            profile_data.extra_editors,
+            "extra editor"
+        ),
+
         organization = Catalogue.organization[profile_data.organization],
 
         layers = {},
@@ -110,6 +121,14 @@ function Setup.list_packages(config)
         for _, terminal in ipairs(config.extra_terminals) do
             if terminal.package then
                 table.insert(packages, terminal.package)
+            end
+        end
+    end
+
+    if config.extra_editors then
+        for _, editor in ipairs(config.extra_editors) do
+            if editor.package then
+                table.insert(packages, editor.package)
             end
         end
     end
@@ -186,6 +205,12 @@ function Setup.summary(config)
     table.insert(lines, "- " .. config.shell.name)
     table.insert(lines, "- " .. config.browser.name)
     table.insert(lines, "- " .. config.editor.name)
+
+    if config.extra_editors then
+        for _, editor in ipairs(config.extra_editors) do
+            table.insert(lines, "- " .. editor.name)
+        end
+    end
 
     if config.organization then
         table.insert(lines, "- " .. config.organization.name)
