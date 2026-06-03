@@ -6,32 +6,32 @@ Layers.developer = {
     profiles = {
         python = {
             name = "Python Developer",
+
             tools = {
                 "python",
                 "pip",
                 "venv",
-                "git",
                 "lazygit",
             },
         },
 
         web = {
             name = "Web Developer",
+
             tools = {
                 "nodejs",
                 "npm",
-                "git",
                 "lazygit",
             },
         },
 
         fullstack = {
             name = "Full Stack Developer",
+
             tools = {
                 "python",
                 "nodejs",
                 "npm",
-                "git",
                 "lazygit",
             },
         },
@@ -44,6 +44,7 @@ Layers.containers = {
     choices = {
         docker = {
             name = "Docker",
+
             packages = {
                 "docker",
                 "docker-compose",
@@ -52,6 +53,7 @@ Layers.containers = {
 
         podman = {
             name = "Podman",
+
             packages = {
                 "podman",
             },
@@ -59,6 +61,7 @@ Layers.containers = {
 
         none = {
             name = "Aucun",
+
             packages = {},
         },
     },
@@ -70,6 +73,7 @@ Layers.virtualization = {
     choices = {
         virt_manager = {
             name = "Virt-Manager",
+
             packages = {
                 "virt-manager",
                 "qemu-full",
@@ -81,6 +85,7 @@ Layers.virtualization = {
 
         gnome_boxes = {
             name = "GNOME Boxes",
+
             packages = {
                 "gnome-boxes",
             },
@@ -88,6 +93,7 @@ Layers.virtualization = {
 
         none = {
             name = "Aucun",
+
             packages = {},
         },
     },
