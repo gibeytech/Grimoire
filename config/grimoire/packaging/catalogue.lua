@@ -80,4 +80,24 @@ Catalogue.editors = {
     },
 }
 
+Catalogue.organization = {
+    obsidian = {
+        name = "Obsidian",
+        package = "obsidian",
+        recommended = true,
+    },
+
+    cherrytree = {
+        name = "CherryTree",
+        package = "cherrytree",
+        recommended = false,
+    },
+
+    joplin = {
+        name = "Joplin",
+        package = "joplin-appimage",
+        recommended = false,
+    },
+}
+
 return Catalogue
