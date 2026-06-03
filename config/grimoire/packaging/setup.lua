@@ -7,6 +7,7 @@ local Layers = require("packaging.layers")
 local aur_packages = {
     ["brave-bin"] = true,
     ["visual-studio-code-bin"] = true,
+    ["joplin-appimage"] = true,
 }
 
 function Setup.new(profile, options)
@@ -25,6 +26,7 @@ function Setup.new(profile, options)
         shell = Catalogue.shells[profile_data.shell],
         browser = Catalogue.browsers[profile_data.browser],
         editor = Catalogue.editors[profile_data.editor],
+        organization = Catalogue.organization[profile_data.organization],
 
         layers = {},
     }
@@ -73,6 +75,7 @@ function Setup.list_packages(config)
         config.shell,
         config.browser,
         config.editor,
+        config.organization,
     }
 
     for _, component in ipairs(components) do
@@ -146,6 +149,11 @@ function Setup.summary(config)
     table.insert(lines, "- " .. config.shell.name)
     table.insert(lines, "- " .. config.browser.name)
     table.insert(lines, "- " .. config.editor.name)
+
+    if config.organization then
+        table.insert(lines, "- " .. config.organization.name)
+    end
+
     table.insert(lines, "")
 
     if config.layers.developer then

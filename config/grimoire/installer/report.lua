@@ -23,6 +23,11 @@ function Report.generate(config)
     table.insert(lines, config.shell.name)
     table.insert(lines, config.browser.name)
     table.insert(lines, config.editor.name)
+
+    if config.organization then
+        table.insert(lines, config.organization.name)
+    end
+
     table.insert(lines, "")
 
     if config.layers.developer then

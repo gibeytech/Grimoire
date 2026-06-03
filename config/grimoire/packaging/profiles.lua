@@ -1,10 +1,11 @@
 local Profiles = {}
 
-Profiles.beginner = {
+Profiles.basic = {
     terminal = "ghostty",
     shell = "fish",
     browser = "brave",
     editor = "vscode",
+    organization = "obsidian",
 }
 
 Profiles.advanced = {
@@ -12,14 +13,15 @@ Profiles.advanced = {
     shell = "fish",
     browser = "brave",
     editor = "neovim",
+    organization = "obsidian",
 }
+
 Profiles.gibeytech = {
     terminal = "ghostty",
     shell = "fish",
     browser = "brave",
     editor = "neovim",
+    organization = "obsidian",
 }
-
-Profiles.custom = {}
 
 return Profiles
