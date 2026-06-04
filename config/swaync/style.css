@@ -7,7 +7,7 @@
   --noti-bg-alpha: 0.8;
   --noti-bg-darker: rgb(38, 38, 38);
   --noti-bg-hover: @surface;
-  --noti-bg-focus: @alpha(accent, 0.35;
+  --noti-bg-focus: rgba(224, 120, 154, 0.35);
   --noti-close-bg: rgb(78, 78, 78);
   --noti-close-bg-hover: rgb(94, 94, 94);
   --text-color: @text;
