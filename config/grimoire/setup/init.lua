@@ -17,4 +17,25 @@ Cette couche ne doit pas :
 - remplacer l'Install Engine
 ]]
 
+Setup.detect = require("setup.detect")
+
+function Setup.run()
+    print("")
+    print("===================================")
+    print("      Bienvenue dans Grimoire")
+    print("===================================")
+    print("")
+
+    local system = Setup.detect.run()
+
+    print("Analyse système terminée")
+    print("")
+
+    print("Session : " .. tostring(system.session))
+    print("Desktop : " .. tostring(system.desktop))
+    print("")
+
+    return system
+end
+
 return Setup
