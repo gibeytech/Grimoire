@@ -1,7 +1,5 @@
-@import "colors.css";
-
 * {
-    font-family: "JetBrainsMono Nerd Font";
+    font-family: "JetBrainsMono Nerd Font propo";
     font-size: 17px;
     border: none;
     border-radius: 0;
@@ -9,10 +7,10 @@
 }
 
 window#waybar {
-    background: alpha(@background, 0.92);
-    color: @text;
+    background: rgba(34, 26, 26, 0.92);
+    color: #f8f8f2;
     border-radius: 12px;
-    border: 1px solid alpha(@accent, 0.5);
+    border: 1px solid rgba(224, 120, 154, 0.5);
 }
 
 .modules-left,
@@ -24,7 +22,7 @@ window#waybar {
 /* Workspaces */
 #workspaces button {
     padding: 2px 10px;
-    color: @accent;
+    color: #e0789a;
     background: transparent;
     border-radius: 8px;
     margin: 4px 2px;
@@ -32,44 +30,43 @@ window#waybar {
 }
 
 #workspaces button.active {
-    color: @background;
-    background: @accent;
+    color: #221a1a;
+    background: #e0789a;
 }
 
 #workspaces button:hover {
-    background: alpha(@accent, 0.2);
-    color: @text;
+    background: rgba(224, 120, 154, 0.2);
+    color: #f8f8f2;
 }
 
 /* Modules droite */
 #clock,
-#backlight,
 #pulseaudio,
 #network,
 #battery,
 #bluetooth,
 #tray {
     padding: 2px 10px;
-    color: @accent;
-    background: alpha(@surface, 0.6);
+    color: #e0789a;
+    background: rgba(45, 32, 32, 0.6);
     border-radius: 8px;
     margin: 4px 2px;
 }
 
 /* Batterie */
 #battery.charging {
-    color: @success;
+    color: #69ff94;
 }
 
 #battery.warning:not(.charging) {
-    color: @warning;
+    color: #ffb86c;
 }
 
 #battery.critical:not(.charging) {
-    color: @danger;
+    color: #ff6e6e;
 }
 
 /* Bluetooth */
 #bluetooth.connected {
-    color: @info;
+    color: #a4ffff;
 }
