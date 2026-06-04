@@ -79,7 +79,6 @@ Layers.virtualization = {
                 "qemu-full",
                 "libvirt",
                 "dnsmasq",
-                "bridge-utils",
             },
         },
 
