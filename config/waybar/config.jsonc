@@ -71,11 +71,14 @@
         "on-click": "blueman-manager"
     },
 
-    "network": {
-        "format": "󰤨 {essid}",
-        "format-disconnected": "󰤭",
-        "tooltip-format": "{ipAddr}"
-    },
+   "network": {
+       "format-wifi": "󰤨 {essid}",
+       "format-ethernet": "󰈀 connecté",
+       "format-disconnected": "󰤭 déconnecté",
+       "tooltip-format-wifi": "{ifname} · {ipaddr}",
+       "tooltip-format-ethernet": "{ifname} · {ipaddr}",
+       "tooltip-format-disconnected": "Réseau déconnecté"
+   },
 
     "battery": {
         "format": "{icon} {capacity}%",
