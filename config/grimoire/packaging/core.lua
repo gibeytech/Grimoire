@@ -2,16 +2,6 @@ local Core = {}
 
 Core.packages = {
     {
-        name = "Git",
-        package = "git",
-    },
-
-    {
-        name = "OpenSSH",
-        package = "openssh",
-    },
-
-    {
         name = "Hyprpicker",
         package = "hyprpicker",
     },
