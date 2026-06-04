@@ -33,39 +33,10 @@ function Execute.dry_run(config)
     return table.concat(lines, "\n")
 end
 
-function Execute.confirmation(config)
-    assert_valid(config)
-
-    local split = Packaging.setup.split_packages(config)
-    local total = #split.official + #split.aur
-
-    local lines = {}
-
-    table.insert(lines, "=================================")
-    table.insert(lines, "   Grimoire V2 Installation Plan")
-    table.insert(lines, "=================================")
-    table.insert(lines, "")
-
-    table.insert(lines, "Profile : " .. config.profile)
-    table.insert(lines, "")
-
-    table.insert(lines, "Packages : " .. total)
-    table.insert(lines, "- Official : " .. #split.official)
-    table.insert(lines, "- AUR      : " .. #split.aur)
-    table.insert(lines, "")
-
-    table.insert(lines, "Commands:")
-    table.insert(lines, Packaging.setup.install_command(config))
-    table.insert(lines, "")
-    table.insert(lines, "No command has been executed yet.")
-    table.insert(lines, "This is only a confirmation preview.")
-
-    return table.concat(lines, "\n")
-end
-
 function Execute.install(config)
     assert_valid(config)
 
+    local split = Packaging.setup.split_packages(config)
     local lines = {}
 
     table.insert(lines, "=================================")
@@ -73,17 +44,35 @@ function Execute.install(config)
     table.insert(lines, "=================================")
     table.insert(lines, "")
 
-    table.insert(lines, "Validation : OK")
-    table.insert(lines, "Confirmation : OK")
-    table.insert(lines, "")
+    if #split.official > 0 then
+        local command = "sudo pacman -S " .. table.concat(split.official, " ")
 
-    table.insert(lines, "Simulation mode enabled.")
-    table.insert(lines, "No package has been installed.")
-    table.insert(lines, "")
-    table.insert(lines, "Next milestone:")
-    table.insert(lines, "- interactive confirmation")
-    table.insert(lines, "- package installation")
-    table.insert(lines, "- post-install hooks")
+        table.insert(lines, "Installing official packages:")
+        table.insert(lines, command)
+        table.insert(lines, "")
+
+        local result = os.execute(command)
+
+        if result ~= true and result ~= 0 then
+            error("Official package installation failed.")
+        end
+    else
+        table.insert(lines, "No official package to install.")
+        table.insert(lines, "")
+    end
+
+    if #split.aur > 0 then
+        table.insert(lines, "AUR packages detected:")
+        for _, package in ipairs(split.aur) do
+            table.insert(lines, "- " .. package)
+        end
+
+        table.insert(lines, "")
+        table.insert(lines, "AUR installation is not implemented yet.")
+        table.insert(lines, "Install yay support will be handled in a later step.")
+    else
+        table.insert(lines, "No AUR package to install.")
+    end
 
     return table.concat(lines, "\n")
 end
