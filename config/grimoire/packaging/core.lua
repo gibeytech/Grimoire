@@ -35,11 +35,6 @@ Core.packages = {
     },
 
     {
-        name = "Wlogout",
-        package = "wlogout",
-    },
-
-    {
         name = "swww",
         package = "swww",
     },
