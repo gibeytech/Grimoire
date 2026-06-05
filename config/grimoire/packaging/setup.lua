@@ -59,6 +59,8 @@ function Setup.new(profile, options)
         browser = Catalogue.browsers[profile_data.browser],
 
         editor = Catalogue.editors[profile_data.editor],
+	file_manager = Catalogue.file_managers[profile_data.file_manager],
+
 
         extra_editors = resolve_extra_items(
             Catalogue.editors,
@@ -126,6 +128,7 @@ function Setup.list_packages(config)
         config.shell,
         config.browser,
         config.editor,
+	config.file_manager,
         config.organization,
     }
 
@@ -224,6 +227,7 @@ function Setup.summary(config)
     table.insert(lines, "- " .. config.shell.name)
     table.insert(lines, "- " .. config.browser.name)
     table.insert(lines, "- " .. config.editor.name)
+    table.insert(lines, "- " .. config.file_manager.name)
 
     for _, editor in ipairs(config.extra_editors) do
         table.insert(lines, "- " .. editor.name)

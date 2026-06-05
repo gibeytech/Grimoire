@@ -5,6 +5,7 @@ Profiles.beginner = {
     shell = "fish",
     browser = "brave",
     editor = "vscode",
+    file_manager = "thunar",
     organization = "obsidian",
 }
 
@@ -13,6 +14,7 @@ Profiles.advanced = {
     shell = "fish",
     browser = "brave",
     editor = "neovim",
+    file_manager = "thunar",
     organization = "obsidian",
 }
 
@@ -30,6 +32,7 @@ Profiles.gibeytech = {
         "vscode",
     },
 
+    file_manager = "thunar",
     organization = "obsidian",
 }
 

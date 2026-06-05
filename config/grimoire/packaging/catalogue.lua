@@ -80,6 +80,26 @@ Catalogue.editors = {
     },
 }
 
+Catalogue.file_managers = {
+    thunar = {
+        name = "Thunar",
+        package = "thunar",
+        recommended = true,
+    },
+
+    dolphin = {
+        name = "Dolphin",
+        package = "dolphin",
+        recommended = false,
+    },
+
+    yazi = {
+        name = "Yazi",
+        package = "yazi",
+        recommended = false,
+    },
+}
+
 Catalogue.organization = {
     obsidian = {
         name = "Obsidian",
