@@ -1,6 +1,6 @@
-require("core.init")
-
 require("config.init")
+
+require("core.init")
 
 require("theme.init")
 require("workflow.init")
