@@ -2,41 +2,46 @@
 
 set -euo pipefail
 
-echo "═══════════════════════════════════"
-echo "        Bienvenue dans Grimoire"
-echo "═══════════════════════════════════"
-echo
-echo "Cet assistant préparera l'installation"
-echo "et la configuration de Grimoire V2."
-echo
-echo "Aucune modification système ne sera"
-echo "effectuée dans cette version squelette."
-echo
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-read -rp "Continuer ? [O/n] " answer
+export LUA_PATH="$ROOT_DIR/config/grimoire/?.lua;$ROOT_DIR/config/grimoire/?/init.lua;$ROOT_DIR/config/grimoire/?/?.lua;;"
 
-case "${answer:-O}" in
-    O|o|Y|y|"")
-        echo
-        echo "Analyse bootstrap..."
-        ;;
-    *)
-        echo "Installation annulée."
-        exit 0
-        ;;
-esac
+TMP_LUA="$(mktemp)"
+trap 'rm -f "$TMP_LUA"' EXIT
 
-echo
-echo "Vérification des prérequis :"
+cat > "$TMP_LUA" <<'LUA'
+local Setup = require("setup")
+local Installer = require("installer")
 
-for cmd in git lua; do
-    if command -v "$cmd" >/dev/null 2>&1; then
-        echo "✓ $cmd détecté"
-    else
-        echo "✗ $cmd manquant"
-    fi
-done
+local result = Setup.run()
 
-echo
-echo "Squelette install.sh validé."
-echo "Prochaine étape : brancher config.setup()."
+local config = Installer.builder.build(result.profile)
+
+print("")
+print(Installer.preview.summary(config))
+print("")
+
+io.write("Installer Grimoire V2 alpha ? [o/N] ")
+local answer = io.read()
+
+if answer ~= "o" and answer ~= "O" and answer ~= "oui" and answer ~= "Oui" then
+    print("")
+    print("Installation annulée.")
+    os.exit(0)
+end
+
+print("")
+print("Lancement de l'installation alpha...")
+print("")
+
+local output = Installer.execute.install(config)
+
+print(output)
+print("")
+print("Installation alpha terminée.")
+print("")
+print("Note : les paquets AUR sont seulement détectés pour l'instant.")
+print("Note : le déploiement des dotfiles viendra dans une étape suivante.")
+LUA
+
+lua "$TMP_LUA"

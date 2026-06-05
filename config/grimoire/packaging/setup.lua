@@ -4,6 +4,7 @@ local Profiles = require("packaging.profiles")
 local Catalogue = require("packaging.catalogue")
 local Layers = require("packaging.layers")
 local Core = require("packaging.core")
+local Desktop = require("packaging.desktop")
 
 local aur_packages = {
     ["brave-bin"] = true,
@@ -44,6 +45,7 @@ function Setup.new(profile, options)
         profile = profile,
 
         core = Core.packages,
+        desktop = Desktop.packages,
 
         terminal = Catalogue.terminals[profile_data.terminal],
 
@@ -110,6 +112,11 @@ function Setup.list_packages(config)
 
     -- Core
     for _, component in ipairs(config.core) do
+        table.insert(packages, component.package)
+    end
+
+    -- Desktop
+    for _, component in ipairs(config.desktop) do
         table.insert(packages, component.package)
     end
 
@@ -203,6 +210,7 @@ function Setup.summary(config)
     table.insert(lines, "Profile : " .. config.profile)
     table.insert(lines, "")
     table.insert(lines, "Core : " .. tostring(#config.core) .. " packages")
+    table.insert(lines, "Desktop : " .. tostring(#config.desktop) .. " packages")
     table.insert(lines, "")
 
     table.insert(lines, "Applications")

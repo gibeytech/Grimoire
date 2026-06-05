@@ -1,5 +1,7 @@
 # Grimoire V2 — SETUP_LAYER.md
 
+# Grimoire V2 — SETUP_LAYER.md
+
 ## Objectif
 
 Le Setup Layer est l'assistant d'installation de Grimoire.
@@ -77,6 +79,153 @@ Ces responsabilités appartiennent à l'Install Engine.
 
 ---
 
+# Flux simplifié
+
+```text
+Detect
+↓
+Compatibility
+↓
+Selection
+↓
+Deploy.preview()
+↓
+Summary
+↓
+Validation finale
+↓
+Backup
+↓
+Deploy.run()
+↓
+Install Engine
+```
+
+---
+
+# Contrat des choix utilisateur
+
+`selection.lua` produit un objet simple.
+
+Il ne résout pas les paquets.
+
+Il ne connaît pas les chemins de configuration.
+
+Il ne prépare pas les sauvegardes.
+
+Exemple :
+
+```lua
+choices = {
+    terminals = {
+        "kitty",
+        "ghostty",
+    },
+
+    shell = "fish",
+    browser = "brave",
+    editor = "vscode",
+    display_manager = "sddm",
+}
+```
+
+Principe :
+
+```text
+choices = simple
+plan = riche
+```
+
+---
+
+# Contrat du plan
+
+`deploy.lua` transforme les choix utilisateur en plan concret via :
+
+```text
+Deploy.preview()
+```
+
+Ce plan sert ensuite à :
+
+* afficher le résumé final ;
+* prévoir les sauvegardes ;
+* transmettre les actions au moteur d'installation.
+
+Structure minimale :
+
+```lua
+plan = {
+    components = {},
+
+    backups = {},
+
+    packages = {
+        official = {},
+        aur = {},
+    },
+}
+```
+
+Exemple :
+
+```lua
+plan = {
+    components = {
+        {
+            id = "fish",
+            name = "Fish",
+            package = "fish",
+            config_path = "~/.config/fish",
+        },
+    },
+
+    backups = {
+        {
+            component = "Fish",
+            path = "~/.config/fish",
+        },
+    },
+
+    packages = {
+        official = {
+            "fish",
+        },
+
+        aur = {},
+    },
+}
+```
+
+---
+
+# Validation finale
+
+Principe :
+
+Aucune action ne doit être réalisée avant validation explicite de l'utilisateur.
+
+Cette étape permet de confirmer :
+
+* les composants sélectionnés ;
+* les sauvegardes qui seront réalisées ;
+* les paquets qui seront installés ;
+* les modifications prévues.
+
+Une fois la validation effectuée :
+
+```text
+Validation finale
+↓
+Backup
+↓
+Deploy.run()
+```
+
+Le système est alors protégé avant toute modification.
+
+---
+
 # Modules prévus
 
 ## init.lua
@@ -123,6 +272,52 @@ Ne modifie rien.
 
 ---
 
+## selection.lua
+
+Interface de sélection utilisateur.
+
+Produit les choix utilisateur.
+
+Ne connaît pas la structure interne du catalogue.
+
+Ne résout pas les paquets.
+
+Ne prépare pas les sauvegardes.
+
+---
+
+## deploy.lua
+
+Prépare le plan d'installation.
+
+Fonctions prévues :
+
+* `preview()` prépare le plan sans agir ;
+* `run()` transmet le plan final à l'Install Engine.
+
+Ne réalise aucune installation directement.
+
+---
+
+## summary.lua
+
+Affiche le résumé final.
+
+Contient :
+
+* composants sélectionnés ;
+* sauvegardes prévues ;
+* nombre de paquets officiels ;
+* nombre de paquets AUR.
+
+Actions possibles :
+
+* Installer
+* Modifier
+* Quitter
+
+---
+
 ## backup.lua
 
 Responsable des sauvegardes.
@@ -136,64 +331,11 @@ Fonctions :
 
 Principe :
 
-Ne jamais casser un système existant.
+Ne jamais écraser une configuration existante sans sauvegarde.
 
----
+`backup.lua` ne décide pas ce qui doit être sauvegardé.
 
-## selection.lua
-
-Interface de sélection utilisateur.
-
-Affiche les choix préparés par le Packaging Layer.
-
-Ne connaît pas la structure interne du catalogue.
-
----
-
-## summary.lua
-
-Affiche le résumé final.
-
-Contient :
-
-* composants sélectionnés ;
-* sauvegardes prévues ;
-* paquets ;
-* actions futures.
-
-Actions possibles :
-
-* Installer
-* Modifier
-* Quitter
-
----
-
-## deploy.lua
-
-Prépare le plan d'installation.
-
-Ne réalise aucune installation directement.
-
-Transmet les informations à l'Install Engine.
-
----
-
-# Flux simplifié
-
-```text
-Detect
-↓
-Compatibility
-↓
-Selection
-↓
-Summary
-↓
-Deploy
-↓
-Install Engine
-```
+Il exécute les sauvegardes prévues par le plan.
 
 ---
 

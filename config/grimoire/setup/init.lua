@@ -1,7 +1,7 @@
 local Setup = {}
 
 --[[
-Grimoire setup layer
+Grimoire Setup Layer
 
 Responsabilité :
 - guider l'utilisateur
@@ -18,6 +18,8 @@ Cette couche ne doit pas :
 ]]
 
 Setup.detect = require("setup.detect")
+Setup.compatibility = require("setup.compatibility")
+Setup.profile = require("setup.profile")
 
 function Setup.run()
     print("")
@@ -35,7 +37,19 @@ function Setup.run()
     print("Desktop : " .. tostring(system.desktop))
     print("")
 
-    return system
+    local report = Setup.compatibility.evaluate(system)
+
+    print("Compatibilité Grimoire : " .. report.score .. "%")
+    print("Niveau : " .. report.level)
+    print("")
+
+    local profile = Setup.profile.select()
+
+    return {
+        system = system,
+        compatibility = report,
+        profile = profile,
+    }
 end
 
 return Setup
