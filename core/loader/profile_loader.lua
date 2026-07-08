@@ -1,3 +1,5 @@
+local Profile = require("core.model.profile")
+
 local ProfileLoader = {}
 
 local REQUIRED_CONFIGS = {
@@ -38,7 +40,7 @@ function ProfileLoader.load(profile_id)
 
   local manifest = load_lua_table(manifest_path)
 
-  local profile = {
+  local profile_data = {
     id = manifest.id or profile_id,
     name = manifest.name or profile_id,
     description = manifest.description or "",
@@ -50,10 +52,10 @@ function ProfileLoader.load(profile_id)
 
   for _, config_name in ipairs(REQUIRED_CONFIGS) do
     local config_path = profile_root .. "/config/" .. config_name .. ".lua"
-    profile.config[config_name] = load_lua_table(config_path)
+    profile_data.config[config_name] = load_lua_table(config_path)
   end
 
-  return profile
+  return Profile:new(profile_data)
 end
 
 return ProfileLoader
