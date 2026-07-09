@@ -2,6 +2,14 @@ local ExecutionResult = require("installer.result.execution_result")
 
 local PackageManager = {}
 
+local DEFAULT_GROUP_ORDER = {
+    "base",
+    "desktop",
+    "development",
+    "multimedia",
+    "graphics",
+}
+
 local function unique_packages(packages)
     local seen = {}
     local result = {}
@@ -16,6 +24,46 @@ local function unique_packages(packages)
     return result
 end
 
+local function contains(values, target)
+    for _, value in ipairs(values or {}) do
+        if value == target then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function sorted_unknown_groups(groups)
+    local unknown = {}
+
+    for group_name, _ in pairs(groups or {}) do
+        if not contains(DEFAULT_GROUP_ORDER, group_name) then
+            table.insert(unknown, group_name)
+        end
+    end
+
+    table.sort(unknown)
+
+    return unknown
+end
+
+local function ordered_group_names(groups)
+    local ordered = {}
+
+    for _, group_name in ipairs(DEFAULT_GROUP_ORDER) do
+        if groups[group_name] ~= nil then
+            table.insert(ordered, group_name)
+        end
+    end
+
+    for _, group_name in ipairs(sorted_unknown_groups(groups)) do
+        table.insert(ordered, group_name)
+    end
+
+    return ordered
+end
+
 local function collect_packages(plan)
     local packages = {}
 
@@ -23,8 +71,10 @@ local function collect_packages(plan)
         return packages
     end
 
-    for _, group_packages in pairs(plan.packages.groups) do
-        for _, package in ipairs(group_packages or {}) do
+    local groups = plan.packages.groups
+
+    for _, group_name in ipairs(ordered_group_names(groups)) do
+        for _, package in ipairs(groups[group_name] or {}) do
             table.insert(packages, package)
         end
     end
@@ -75,7 +125,7 @@ function PackageManager.install(plan, options)
     else
         print("")
         print("[PackageManager] Mode réel demandé")
-        print("[PackageManager] Exécution réelle non activée en RC1-11")
+        print("[PackageManager] Exécution réelle non activée en RC1-12")
         print("[PackageManager] Commande préparée :")
         print(command)
     end
