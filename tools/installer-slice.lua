@@ -5,6 +5,7 @@ local ProfileValidator = require("core.validator.profile_validator")
 local Builder = require("installer.builder")
 local InstallationPlanValidator = require("installer.validator.installation_plan_validator")
 local ExecutionPlanBuilder = require("installer.execution_plan_builder")
+local SummaryBuilder = require("installer.summary_builder")
 local Preview = require("installer.preview")
 local Executor = require("installer.executor")
 
@@ -36,39 +37,23 @@ local function assert_ok(result, label)
     return result
 end
 
-local function manager_label(name)
-    local labels = {
-        packages = "Packages",
-        services = "Services",
-        shell = "Grimoire Shell",
-        assets = "Assets",
-        deploy = "Déploiement",
-    }
+local function summary_value(summary, section, key, fallback)
+    fallback = fallback or 0
 
-    return labels[name] or name
-end
-
-local function print_manager_details(result)
-    local details = result.details or {}
-
-    if result.manager == "packages" and details.packages then
-        print("    commande : " .. tostring(result.command))
-        print("    paquets  : " .. tostring(#details.packages))
-    elseif result.manager == "services" then
-        print("    à activer    : " .. tostring(#(details.enabled or {})))
-        print("    à désactiver : " .. tostring(#(details.disabled or {})))
-    elseif result.manager == "shell" then
-        print("    runtime : " .. tostring(details.runtime))
-        print("    modules : " .. tostring(#(details.modules or {})))
-    elseif result.manager == "assets" then
-        print("    assets : " .. tostring(#(details.assets or {})))
-    elseif result.manager == "deploy" then
-        print("    déploiements : " .. tostring(#(details.deployments or {})))
+    if not summary[section] then
+        return fallback
     end
+
+    if summary[section][key] == nil then
+        return fallback
+    end
+
+    return summary[section][key]
 end
 
 local function print_execution_summary(execution)
-    local total_actions = 0
+    local summary = SummaryBuilder.build(execution.results or {})
+    local total_actions = #(execution.results or {})
 
     print("")
     print("== Résumé Grimoire V3 ==")
@@ -81,25 +66,42 @@ local function print_execution_summary(execution)
         print("Erreur  : " .. tostring(execution.error))
     end
 
-    if type(execution.results) == "table" then
-        print("")
-        print("Managers:")
+    print("")
+    print("Packages")
+    print("---------")
+    print("Actions  : " .. tostring(summary_value(summary, "packages", "actions")))
 
-        for _, result in ipairs(execution.results) do
-            local actions = result.actions or 0
-            total_actions = total_actions + actions
-
-            print("  - " .. manager_label(result.manager) .. " : ok=" .. tostring(result.ok) .. " actions=" .. tostring(actions))
-            print_manager_details(result)
-        end
+    if summary.packages and summary.packages.command then
+        print("Commande : " .. tostring(summary.packages.command))
     end
+
+    print("")
+    print("Services")
+    print("---------")
+    print("Enable  : " .. tostring(summary_value(summary, "services", "enable")))
+    print("Disable : " .. tostring(summary_value(summary, "services", "disable")))
+
+    print("")
+    print("Shell")
+    print("------")
+    print("Modules : " .. tostring(summary_value(summary, "shell", "modules")))
+
+    if summary.shell and summary.shell.runtime then
+        print("Runtime : " .. tostring(summary.shell.runtime))
+    end
+
+    print("")
+    print("Fichiers")
+    print("--------")
+    print("Copies : " .. tostring(summary_value(summary, "assets", "copies")))
+    print("Liens  : " .. tostring(summary_value(summary, "deploy", "symlinks")))
 
     print("")
     print("Total actions préparées : " .. tostring(total_actions))
     print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end
 
-print("== RC1-24 Vertical Slice ==")
+print("== RC1-25 Vertical Slice ==")
 print("Manifest : " .. manifest_path)
 print("Dry-run  : " .. tostring(dry_run))
 print("")
@@ -159,4 +161,4 @@ print("[8/8] Résumé final")
 print_execution_summary(execution)
 
 print("")
-print("RC1-24 OK : ExecutionPlan branché dans le Vertical Slice.")
+print("RC1-25 OK : Résumé final basé sur SummaryBuilder.")

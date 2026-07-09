@@ -72,7 +72,7 @@ local function dispatch_service_operation(action, options)
         print("[ServiceOperation] Dry-run : aucune action systemctl exécutée")
     else
         print("[ServiceOperation] Apply sécurisé : service préparé mais non modifié")
-        print("[ServiceOperation] Action systemctl bloquée volontairement en RC1-24")
+        print("[ServiceOperation] Action systemctl bloquée volontairement en RC1-25")
     end
 
     return ExecutionResult.ok(action.manager, {
@@ -98,7 +98,7 @@ local function dispatch_shell_operation(action, options)
         print("[ShellOperation] Dry-run : aucun déploiement shell exécuté")
     else
         print("[ShellOperation] Apply sécurisé : module shell préparé mais non déployé")
-        print("[ShellOperation] Action shell bloquée volontairement en RC1-24")
+        print("[ShellOperation] Action shell bloquée volontairement en RC1-25")
     end
 
     return ExecutionResult.ok(action.manager, {

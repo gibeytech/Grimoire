@@ -46,7 +46,7 @@ function Executor.run(execution_plan, options)
         print("[Executor] Mode dry-run actif")
     else
         print("[Executor] Mode apply sécurisé actif")
-        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-24")
+        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-25")
     end
 
     if not execution_plan or type(execution_plan.getActions) ~= "function" then
