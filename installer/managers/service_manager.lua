@@ -9,6 +9,16 @@ function ServiceManager.enable(plan, options)
 
     print("[ServiceManager] Activation des services...")
 
+    if options.force_fail_at == "services" then
+        return ExecutionResult.fail("services", "Erreur forcée pour test RC1-09", {
+            dry_run = dry_run,
+            actions = 0,
+            details = {
+                message = "Échec simulé ServiceManager",
+            },
+        })
+    end
+
     return ExecutionResult.ok("services", {
         dry_run = dry_run,
         actions = 0,

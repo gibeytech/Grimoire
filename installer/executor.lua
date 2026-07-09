@@ -6,6 +6,16 @@ local AssetManager = require("installer.managers.asset_manager")
 
 local Executor = {}
 
+local function failure_result(dry_run, failed_result, results)
+    return {
+        ok = false,
+        dry_run = dry_run,
+        failed_at = failed_result.manager,
+        results = results,
+        error = failed_result.error,
+    }
+end
+
 local function run_step(results, step)
     local result = step()
 
@@ -29,83 +39,43 @@ function Executor.run(plan, options)
     local ok, failed_result
 
     ok, failed_result = run_step(results, function()
-        return PackageManager.install(plan, {
-            dry_run = dry_run,
-        })
+        return PackageManager.install(plan, options)
     end)
 
     if not ok then
-        return {
-            ok = false,
-            dry_run = dry_run,
-            failed_at = failed_result.manager,
-            results = results,
-            error = failed_result.error,
-        }
+        return failure_result(dry_run, failed_result, results)
     end
 
     ok, failed_result = run_step(results, function()
-        return ServiceManager.enable(plan, {
-            dry_run = dry_run,
-        })
+        return ServiceManager.enable(plan, options)
     end)
 
     if not ok then
-        return {
-            ok = false,
-            dry_run = dry_run,
-            failed_at = failed_result.manager,
-            results = results,
-            error = failed_result.error,
-        }
+        return failure_result(dry_run, failed_result, results)
     end
 
     ok, failed_result = run_step(results, function()
-        return ShellManager.deploy(plan, {
-            dry_run = dry_run,
-        })
+        return ShellManager.deploy(plan, options)
     end)
 
     if not ok then
-        return {
-            ok = false,
-            dry_run = dry_run,
-            failed_at = failed_result.manager,
-            results = results,
-            error = failed_result.error,
-        }
+        return failure_result(dry_run, failed_result, results)
     end
 
     ok, failed_result = run_step(results, function()
-        return AssetManager.deploy(plan, {
-            dry_run = dry_run,
-        })
+        return AssetManager.deploy(plan, options)
     end)
 
     if not ok then
-        return {
-            ok = false,
-            dry_run = dry_run,
-            failed_at = failed_result.manager,
-            results = results,
-            error = failed_result.error,
-        }
+        return failure_result(dry_run, failed_result, results)
     end
 
     ok, failed_result = run_step(results, function()
-        return DeployManager.deploy(plan, {
-            dry_run = dry_run,
-        })
+        return DeployManager.deploy(plan, options)
     end)
 
     if not ok then
-        return {
-            ok = false,
-            dry_run = dry_run,
-            failed_at = failed_result.manager,
-            results = results,
-            error = failed_result.error,
-        }
+        return failure_result(dry_run, failed_result, results)
     end
 
     return {
