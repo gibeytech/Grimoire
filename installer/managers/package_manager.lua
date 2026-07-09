@@ -1,3 +1,5 @@
+local ExecutionResult = require("installer.result.execution_result")
+
 local PackageManager = {}
 
 local function unique_packages(packages)
@@ -50,12 +52,14 @@ function PackageManager.install(plan, options)
     if #packages == 0 then
         print("[PackageManager] Aucun package à installer")
 
-        return {
-            ok = true,
+        return ExecutionResult.ok("packages", {
             dry_run = dry_run,
-            packages = {},
+            actions = 0,
             command = nil,
-        }
+            details = {
+                packages = {},
+            },
+        })
     end
 
     print("[PackageManager] Packages détectés :")
@@ -71,17 +75,19 @@ function PackageManager.install(plan, options)
     else
         print("")
         print("[PackageManager] Mode réel demandé")
-        print("[PackageManager] Exécution réelle non activée en RC1-07")
+        print("[PackageManager] Exécution réelle non activée en RC1-08")
         print("[PackageManager] Commande préparée :")
         print(command)
     end
 
-    return {
-        ok = true,
+    return ExecutionResult.ok("packages", {
         dry_run = dry_run,
-        packages = packages,
+        actions = #packages,
         command = command,
-    }
+        details = {
+            packages = packages,
+        },
+    })
 end
 
 return PackageManager

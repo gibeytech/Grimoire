@@ -51,4 +51,4 @@ assert(real_result.dry_run == false)
 assert(real_result.command == "sudo pacman -S --needed git curl wget hyprland quickshell swaync")
 
 print("")
-print("RC1-07 OK : PackageManager expose une API install(plan, options).")
+print("RC1-08 OK : PackageManager retourne un ExecutionResult.")

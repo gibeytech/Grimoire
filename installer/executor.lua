@@ -6,25 +6,113 @@ local AssetManager = require("installer.managers.asset_manager")
 
 local Executor = {}
 
+local function run_step(results, step)
+    local result = step()
+
+    table.insert(results, result)
+
+    if not result.ok then
+        return false, result
+    end
+
+    return true, result
+end
+
 function Executor.run(plan, options)
     options = options or {}
 
+    local dry_run = options.dry_run ~= false
+    local results = {}
+
     print("== Grimoire V3 Executor ==")
 
-    PackageManager.install(plan, {
-        dry_run = options.dry_run ~= false,
-    })
+    local ok, failed_result
 
-    ServiceManager.enable(plan, options)
-    ShellManager.deploy(plan, options)
-    AssetManager.deploy(plan, options)
-    DeployManager.deploy(plan, options)
+    ok, failed_result = run_step(results, function()
+        return PackageManager.install(plan, {
+            dry_run = dry_run,
+        })
+    end)
 
-    return true
-end
+    if not ok then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            failed_at = failed_result.manager,
+            results = results,
+            error = failed_result.error,
+        }
+    end
 
-function Executor.execute(plan, options)
-    return Executor.run(plan, options)
+    ok, failed_result = run_step(results, function()
+        return ServiceManager.enable(plan, {
+            dry_run = dry_run,
+        })
+    end)
+
+    if not ok then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            failed_at = failed_result.manager,
+            results = results,
+            error = failed_result.error,
+        }
+    end
+
+    ok, failed_result = run_step(results, function()
+        return ShellManager.deploy(plan, {
+            dry_run = dry_run,
+        })
+    end)
+
+    if not ok then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            failed_at = failed_result.manager,
+            results = results,
+            error = failed_result.error,
+        }
+    end
+
+    ok, failed_result = run_step(results, function()
+        return AssetManager.deploy(plan, {
+            dry_run = dry_run,
+        })
+    end)
+
+    if not ok then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            failed_at = failed_result.manager,
+            results = results,
+            error = failed_result.error,
+        }
+    end
+
+    ok, failed_result = run_step(results, function()
+        return DeployManager.deploy(plan, {
+            dry_run = dry_run,
+        })
+    end)
+
+    if not ok then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            failed_at = failed_result.manager,
+            results = results,
+            error = failed_result.error,
+        }
+    end
+
+    return {
+        ok = true,
+        dry_run = dry_run,
+        results = results,
+    }
 end
 
 function Executor.execute(plan, options)
