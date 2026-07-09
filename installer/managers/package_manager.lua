@@ -1,34 +1,64 @@
 local PackageManager = {}
 
-local function print_packages(value, prefix)
-    prefix = prefix or ""
-
+local function collect_packages(value, result)
     if type(value) ~= "table" then
         return
     end
 
-    for key, item in pairs(value) do
+    for _, item in pairs(value) do
         if type(item) == "string" then
-            print(prefix .. "- " .. item)
+            table.insert(result, item)
         elseif type(item) == "table" then
-            print("")
-            print(prefix .. tostring(key) .. " :")
-            print_packages(item, prefix .. "  ")
+            collect_packages(item, result)
         end
     end
 end
 
+local function unique(values)
+    local seen = {}
+    local result = {}
+
+    for _, value in ipairs(values) do
+        if not seen[value] then
+            seen[value] = true
+            table.insert(result, value)
+        end
+    end
+
+    table.sort(result)
+
+    return result
+end
+
+function PackageManager.get_packages(plan)
+    local packages = {}
+    collect_packages(plan:getPackages(), packages)
+
+    return unique(packages)
+end
+
+function PackageManager.build_command(plan)
+    local packages = PackageManager.get_packages(plan)
+
+    if #packages == 0 then
+        return nil
+    end
+
+    return "sudo pacman -S --needed " .. table.concat(packages, " ")
+end
+
 function PackageManager.install(plan)
-    local packages = plan:getPackages()
+    local packages = PackageManager.get_packages(plan)
 
-    print("[PackageManager] Dry-run : packages détectés")
+    print("[PackageManager] Dry-run : commande d'installation")
 
-    if type(packages) ~= "table" then
-        print("[PackageManager] Aucun package valide.")
+    if #packages == 0 then
+        print("[PackageManager] Aucun package à installer.")
         return
     end
 
-    print_packages(packages)
+    print("")
+    print(PackageManager.build_command(plan))
 end
 
 return PackageManager

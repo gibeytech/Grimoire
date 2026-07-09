@@ -11,4 +11,4 @@ print("")
 Executor.execute(plan)
 
 print("")
-print("RC1-05 OK : PackageManager lit les packages en dry-run.")
+print("RC1-06 OK : PackageManager génère une commande pacman en dry-run.")
