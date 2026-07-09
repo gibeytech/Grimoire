@@ -73,7 +73,7 @@ function ServiceManager.enable(plan, options)
     else
         print("")
         print("[ServiceManager] Apply sécurisé : services préparés mais non modifiés")
-        print("[ServiceManager] Action systemctl bloquée volontairement en RC1-21")
+        print("[ServiceManager] Action systemctl bloquée volontairement en RC1-22")
     end
 
     return ExecutionResult.ok("services", {

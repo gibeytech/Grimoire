@@ -83,6 +83,7 @@ local function collect_packages(plan)
     return unique_packages(packages)
 end
 
+PackageManager.collect_packages = collect_packages
 function PackageManager.build_pacman_command(packages)
     if not packages or #packages == 0 then
         return nil
