@@ -1,0 +1,75 @@
+package.path = "./?.lua;./?/init.lua;" .. package.path
+
+local FileOperations = require("installer.file_operations")
+
+print("== FileOperations RC2-04 Contract Test ==")
+
+local operation = {
+    type = "copy",
+    source = "source.txt",
+    destination = "destination.txt",
+}
+
+----------------------------------------------------------------------
+-- Dry-run
+----------------------------------------------------------------------
+
+local dry_run_result = FileOperations.run(operation, {
+    dry_run = true,
+})
+
+assert(dry_run_result.ok == true)
+assert(dry_run_result.mode == "dry-run")
+assert(dry_run_result.prepared == true)
+assert(dry_run_result.simulated == true)
+assert(dry_run_result.executed == false)
+assert(dry_run_result.error == nil)
+
+----------------------------------------------------------------------
+-- Apply-safe
+----------------------------------------------------------------------
+
+local apply_safe_result = FileOperations.run(operation, {
+    dry_run = false,
+})
+
+assert(apply_safe_result.ok == true)
+assert(apply_safe_result.mode == "apply-safe")
+assert(apply_safe_result.prepared == true)
+assert(apply_safe_result.simulated == true)
+assert(apply_safe_result.executed == false)
+assert(apply_safe_result.error == nil)
+
+----------------------------------------------------------------------
+-- Apply-real (bloqué en RC2)
+----------------------------------------------------------------------
+
+local apply_real_result = FileOperations.run(operation, {
+    dry_run = false,
+    apply_real = true,
+})
+
+assert(apply_real_result.ok == false)
+assert(apply_real_result.mode == "apply-real")
+assert(apply_real_result.prepared == true)
+assert(apply_real_result.simulated == false)
+assert(apply_real_result.executed == false)
+assert(apply_real_result.error == "Mode apply-real non activé en RC2-03")
+
+----------------------------------------------------------------------
+-- Opération invalide
+----------------------------------------------------------------------
+
+local invalid_result = FileOperations.run({}, {
+    dry_run = true,
+})
+
+assert(invalid_result.ok == false)
+assert(invalid_result.mode == "dry-run")
+assert(invalid_result.prepared == false)
+assert(invalid_result.simulated == false)
+assert(invalid_result.executed == false)
+assert(invalid_result.error == "Opération fichier invalide")
+
+print("")
+print("RC2-04 OK : FileOperations respecte le contrat prepare/simulate/execute/run.")
