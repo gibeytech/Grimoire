@@ -13,6 +13,7 @@ function InstallationPlan:new(data)
     plan.shell = data.shell or {}
     plan.theme = data.theme or {}
     plan.assets = data.assets or {}
+    plan.dotfiles = data.dotfiles or {}
 
     return plan
 end
@@ -39,6 +40,10 @@ end
 
 function InstallationPlan:getAssets()
     return self.assets
+end
+
+function InstallationPlan:getDotfiles()
+    return self.dotfiles
 end
 
 return InstallationPlan

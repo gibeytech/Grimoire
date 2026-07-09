@@ -58,4 +58,8 @@ function Profile:getAssets()
     return self.config.assets
 end
 
+function Profile:getDotfiles()
+    return self.manifest.dotfiles
+end
+
 return Profile
