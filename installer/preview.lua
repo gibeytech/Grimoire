@@ -1,6 +1,8 @@
 local Preview = {}
 
 function Preview.summary(plan)
+    local profile = plan:getProfile()
+
     local lines = {}
 
     table.insert(lines, "== Installation Plan ==")
@@ -8,30 +10,30 @@ function Preview.summary(plan)
 
     table.insert(lines, "Profil")
     table.insert(lines, "-------")
-    table.insert(lines, "Nom      : " .. plan.profile.name)
-    table.insert(lines, "ID       : " .. plan.profile.id)
-    table.insert(lines, "Version  : " .. plan.profile.version)
+    table.insert(lines, "Nom      : " .. profile.name)
+    table.insert(lines, "ID       : " .. profile.id)
+    table.insert(lines, "Version  : " .. profile.version)
     table.insert(lines, "")
 
     table.insert(lines, "Composants")
 
-    if plan.packages then
+    if plan:getPackages() then
         table.insert(lines, "  ✓ Packages")
     end
 
-    if plan.services then
+    if plan:getServices() then
         table.insert(lines, "  ✓ Services")
     end
 
-    if plan.shell then
+    if plan:getShell() then
         table.insert(lines, "  ✓ Shell")
     end
 
-    if plan.theme then
+    if plan:getTheme() then
         table.insert(lines, "  ✓ Theme")
     end
 
-    if plan.assets then
+    if plan:getAssets() then
         table.insert(lines, "  ✓ Assets")
     end
 

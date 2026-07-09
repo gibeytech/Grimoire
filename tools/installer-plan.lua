@@ -9,4 +9,4 @@ local plan = Builder.build(profile_id)
 
 print(Preview.summary(plan))
 print("")
-print("RC0-13 OK : Preview génère un résumé d'installation.")
+print("RC1-02 OK : Builder retourne un objet InstallationPlan.")

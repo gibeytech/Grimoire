@@ -1,11 +1,12 @@
 local ProfileLoader = require("core.loader.profile_loader")
+local InstallationPlan = require("installer.model.installation_plan")
 
 local Builder = {}
 
 function Builder.build(profile_id)
     local profile = ProfileLoader.load(profile_id)
 
-    local plan = {
+    return InstallationPlan:new({
         profile = {
             id = profile:getId(),
             name = profile:getName(),
@@ -18,9 +19,7 @@ function Builder.build(profile_id)
         shell = profile:getShell(),
         theme = profile:getTheme(),
         assets = profile:getAssets(),
-    }
-
-    return plan
+    })
 end
 
 return Builder
