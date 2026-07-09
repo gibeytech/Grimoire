@@ -1,64 +1,87 @@
 local PackageManager = {}
 
-local function collect_packages(value, result)
-    if type(value) ~= "table" then
-        return
-    end
-
-    for _, item in pairs(value) do
-        if type(item) == "string" then
-            table.insert(result, item)
-        elseif type(item) == "table" then
-            collect_packages(item, result)
-        end
-    end
-end
-
-local function unique(values)
+local function unique_packages(packages)
     local seen = {}
     local result = {}
 
-    for _, value in ipairs(values) do
-        if not seen[value] then
-            seen[value] = true
-            table.insert(result, value)
+    for _, package in ipairs(packages or {}) do
+        if not seen[package] then
+            seen[package] = true
+            table.insert(result, package)
         end
     end
-
-    table.sort(result)
 
     return result
 end
 
-function PackageManager.get_packages(plan)
+local function collect_packages(plan)
     local packages = {}
-    collect_packages(plan:getPackages(), packages)
 
-    return unique(packages)
+    if not plan or not plan.packages then
+        return packages
+    end
+
+    for _, group in ipairs(plan.packages.groups or {}) do
+        for _, package in ipairs(group.packages or {}) do
+            table.insert(packages, package)
+        end
+    end
+
+    return unique_packages(packages)
 end
 
-function PackageManager.build_command(plan)
-    local packages = PackageManager.get_packages(plan)
-
-    if #packages == 0 then
+function PackageManager.build_pacman_command(packages)
+    if not packages or #packages == 0 then
         return nil
     end
 
     return "sudo pacman -S --needed " .. table.concat(packages, " ")
 end
 
-function PackageManager.install(plan)
-    local packages = PackageManager.get_packages(plan)
+function PackageManager.install(plan, options)
+    options = options or {}
 
-    print("[PackageManager] Dry-run : commande d'installation")
+    local dry_run = options.dry_run ~= false
+    local packages = collect_packages(plan)
+    local command = PackageManager.build_pacman_command(packages)
+
+    print("[PackageManager] Installation des packages")
 
     if #packages == 0 then
-        print("[PackageManager] Aucun package à installer.")
-        return
+        print("[PackageManager] Aucun package à installer")
+
+        return {
+            ok = true,
+            dry_run = dry_run,
+            packages = {},
+            command = nil,
+        }
     end
 
-    print("")
-    print(PackageManager.build_command(plan))
+    print("[PackageManager] Packages détectés :")
+
+    for _, package in ipairs(packages) do
+        print("  - " .. package)
+    end
+
+    if dry_run then
+        print("")
+        print("[PackageManager] Dry-run : commande préparée")
+        print(command)
+    else
+        print("")
+        print("[PackageManager] Mode réel demandé")
+        print("[PackageManager] Exécution réelle non activée en RC1-07")
+        print("[PackageManager] Commande préparée :")
+        print(command)
+    end
+
+    return {
+        ok = true,
+        dry_run = dry_run,
+        packages = packages,
+        command = command,
+    }
 end
 
 return PackageManager

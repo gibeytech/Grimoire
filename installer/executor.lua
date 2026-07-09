@@ -6,12 +6,25 @@ local AssetManager = require("installer.managers.asset_manager")
 
 local Executor = {}
 
-function Executor.execute(plan)
-    PackageManager.install(plan)
-    ServiceManager.enable(plan)
-    ShellManager.deploy(plan)
-    AssetManager.deploy(plan)
-    DeployManager.deploy(plan)
+function Executor.run(plan, options)
+    options = options or {}
+
+    print("== Grimoire V3 Executor ==")
+
+    PackageManager.install(plan, {
+        dry_run = options.dry_run ~= false,
+    })
+
+    ServiceManager.enable(plan, options)
+    ShellManager.deploy(plan, options)
+    AssetManager.deploy(plan, options)
+    DeployManager.deploy(plan, options)
+
+    return true
+end
+
+function Executor.execute(plan, options)
+    return Executor.run(plan, options)
 end
 
 return Executor
