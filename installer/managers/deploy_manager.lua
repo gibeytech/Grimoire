@@ -71,7 +71,7 @@ function DeployManager.deploy(plan, options)
     else
         print("")
         print("[DeployManager] Apply sécurisé : dotfiles préparés mais non liés")
-        print("[DeployManager] Action système bloquée volontairement en RC1-18")
+        print("[DeployManager] Action système bloquée volontairement en RC1-19")
     end
 
     return ExecutionResult.ok("deploy", {

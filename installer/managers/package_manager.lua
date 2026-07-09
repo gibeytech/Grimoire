@@ -1,4 +1,5 @@
 local ExecutionResult = require("installer.result.execution_result")
+local CommandRunner = require("installer.command_runner")
 
 local PackageManager = {}
 
@@ -108,6 +109,7 @@ function PackageManager.install(plan, options)
             command = nil,
             details = {
                 packages = {},
+                runner = nil,
             },
         })
     end
@@ -118,16 +120,20 @@ function PackageManager.install(plan, options)
         print("  - " .. package)
     end
 
-    if dry_run then
-        print("")
-        print("[PackageManager] Dry-run : commande préparée")
-        print(command)
-    else
-        print("")
-        print("[PackageManager] Apply sécurisé : commande préparée mais non exécutée")
-        print("[PackageManager] Action système bloquée volontairement en RC1-18")
-        print("[PackageManager] Commande préparée :")
-        print(command)
+    print("")
+
+    local runner_result = CommandRunner.run(command, options)
+
+    if not runner_result.ok then
+        return ExecutionResult.fail("packages", runner_result.error, {
+            dry_run = dry_run,
+            actions = 0,
+            command = command,
+            details = {
+                packages = packages,
+                runner = runner_result,
+            },
+        })
     end
 
     return ExecutionResult.ok("packages", {
@@ -136,6 +142,7 @@ function PackageManager.install(plan, options)
         command = command,
         details = {
             packages = packages,
+            runner = runner_result,
         },
     })
 end

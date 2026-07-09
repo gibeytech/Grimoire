@@ -50,7 +50,7 @@ function Executor.run(plan, options)
         print("[Executor] Mode dry-run actif")
     else
         print("[Executor] Mode apply sécurisé actif")
-        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-18")
+        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-19")
     end
 
     local ok, failed_result

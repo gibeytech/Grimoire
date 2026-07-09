@@ -98,7 +98,7 @@ local function print_execution_summary(execution)
     print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end
 
-print("== RC1-18 Vertical Slice ==")
+print("== RC1-19 Vertical Slice ==")
 print("Manifest : " .. manifest_path)
 print("Dry-run  : " .. tostring(dry_run))
 print("")
@@ -150,4 +150,4 @@ print("[7/7] Résumé final")
 print_execution_summary(execution)
 
 print("")
-print("RC1-18 OK : Mode apply sécurisé sans action système réelle.")
+print("RC1-19 OK : Mode apply sécurisé sans action système réelle.")
