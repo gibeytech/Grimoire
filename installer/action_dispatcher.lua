@@ -1,28 +1,100 @@
 local CommandRunner = require("installer.command_runner")
 local FileOperations = require("installer.file_operations")
 local ServiceOperation = require("installer.service_operation")
+local ShellOperation = require("installer.shell_operation")
 local ExecutionResult = require("installer.result.execution_result")
 
 local ActionDispatcher = {}
+
+local runners = {
+    command = {
+        runner = CommandRunner,
+        input = function(action)
+            return action.command
+        end,
+        result_key = "runner",
+    },
+
+    file_operation = {
+        runner = FileOperations,
+        input = function(action)
+            return action.operation
+        end,
+        result_key = "operation",
+    },
+
+    service_operation = {
+        runner = ServiceOperation,
+        input = function(action)
+            return action
+        end,
+        result_key = "service",
+    },
+
+    shell_operation = {
+        runner = ShellOperation,
+        input = function(action)
+            return action
+        end,
+        result_key = "shell",
+    },
+}
 
 local function action_label(action)
     return tostring(action.manager) .. "/" .. tostring(action.name)
 end
 
-local function dispatch_command(action, options)
-    print("[ActionDispatcher] Commande : " .. action_label(action))
+local function action_title(action)
+    if action.type == "command" then
+        return "Commande"
+    end
 
-    local runner_result = CommandRunner.run(action.command, options)
+    if action.type == "file_operation" then
+        return "Opération fichier"
+    end
+
+    if action.type == "service_operation" then
+        return "Service"
+    end
+
+    if action.type == "shell_operation" then
+        return "Shell"
+    end
+
+    return "Action"
+end
+
+local function result_details(action, runner_config, runner_result)
+    local details = {
+        action = action,
+    }
+
+    details[runner_config.result_key] = runner_result
+
+    if action.type == "service_operation" then
+        details.operation = runner_result.operation
+    end
+
+    if action.type == "shell_operation" then
+        details.module = runner_result.module
+        details.runtime = runner_result.runtime
+    end
+
+    return details
+end
+
+local function dispatch_registered_action(action, options, runner_config)
+    print("[ActionDispatcher] " .. action_title(action) .. " : " .. action_label(action))
+
+    local runner_result = runner_config.runner.run(runner_config.input(action), options)
+    local details = result_details(action, runner_config, runner_result)
 
     if not runner_result.ok then
         return ExecutionResult.fail(action.manager, runner_result.error, {
             dry_run = options.dry_run ~= false,
             actions = 1,
             command = action.command,
-            details = {
-                action = action,
-                runner = runner_result,
-            },
+            details = details,
         })
     end
 
@@ -30,89 +102,7 @@ local function dispatch_command(action, options)
         dry_run = options.dry_run ~= false,
         actions = 1,
         command = action.command,
-        details = {
-            action = action,
-            runner = runner_result,
-        },
-    })
-end
-
-local function dispatch_file_operation(action, options)
-    print("[ActionDispatcher] Opération fichier : " .. action_label(action))
-
-    local operation_result = FileOperations.run(action.operation, options)
-
-    if not operation_result.ok then
-        return ExecutionResult.fail(action.manager, operation_result.error, {
-            dry_run = options.dry_run ~= false,
-            actions = 1,
-            details = {
-                action = action,
-                operation = operation_result,
-            },
-        })
-    end
-
-    return ExecutionResult.ok(action.manager, {
-        dry_run = options.dry_run ~= false,
-        actions = 1,
-        details = {
-            action = action,
-            operation = operation_result,
-        },
-    })
-end
-
-local function dispatch_service_operation(action, options)
-    print("[ActionDispatcher] Service : " .. action_label(action))
-
-    local service_result = ServiceOperation.run(action, options)
-
-    if not service_result.ok then
-        return ExecutionResult.fail(action.manager, service_result.error, {
-            dry_run = options.dry_run ~= false,
-            actions = 1,
-            details = {
-                action = action,
-                service = service_result,
-            },
-        })
-    end
-
-    return ExecutionResult.ok(action.manager, {
-        dry_run = options.dry_run ~= false,
-        actions = 1,
-        details = {
-            action = action,
-            service = service_result,
-            operation = service_result.operation,
-        },
-    })
-end
-
-local function dispatch_shell_operation(action, options)
-    local dry_run = options.dry_run ~= false
-
-    print("[ActionDispatcher] Shell : " .. action_label(action))
-    print("[ShellOperation] Module : " .. tostring(action.module))
-    print("[ShellOperation] Runtime : " .. tostring(action.runtime))
-
-    if dry_run then
-        print("[ShellOperation] Dry-run : aucun déploiement shell exécuté")
-    else
-        print("[ShellOperation] Apply sécurisé : module shell préparé mais non déployé")
-        print("[ShellOperation] Action shell bloquée volontairement en RC1-25")
-    end
-
-    return ExecutionResult.ok(action.manager, {
-        dry_run = dry_run,
-        actions = 1,
-        details = {
-            action = action,
-            module = action.module,
-            runtime = action.runtime,
-            executed = false,
-        },
+        details = details,
     })
 end
 
@@ -129,29 +119,19 @@ function ActionDispatcher.dispatch(action, options)
         })
     end
 
-    if action.type == "command" then
-        return dispatch_command(action, options)
+    local runner_config = runners[action.type]
+
+    if not runner_config then
+        return ExecutionResult.fail(action.manager or "unknown", "Type d'action inconnu: " .. tostring(action.type), {
+            dry_run = options.dry_run ~= false,
+            actions = 0,
+            details = {
+                action = action,
+            },
+        })
     end
 
-    if action.type == "file_operation" then
-        return dispatch_file_operation(action, options)
-    end
-
-    if action.type == "service_operation" then
-        return dispatch_service_operation(action, options)
-    end
-
-    if action.type == "shell_operation" then
-        return dispatch_shell_operation(action, options)
-    end
-
-    return ExecutionResult.fail(action.manager or "unknown", "Type d'action inconnu: " .. tostring(action.type), {
-        dry_run = options.dry_run ~= false,
-        actions = 0,
-        details = {
-            action = action,
-        },
-    })
+    return dispatch_registered_action(action, options, runner_config)
 end
 
 return ActionDispatcher
