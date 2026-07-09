@@ -11,4 +11,4 @@ print("")
 Executor.execute(plan)
 
 print("")
-print("RC1-04 OK : Executor orchestre les managers.")
+print("RC1-05 OK : PackageManager lit les packages en dry-run.")
