@@ -3,7 +3,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local Builder = require("installer.builder")
 local ExecutionPlanBuilder = require("installer.execution_plan_builder")
 
-print("== ExecutionPlan RC1-23 Test ==")
+print("== ExecutionPlan RC1-24 Test ==")
 
 local installation_plan = Builder.build("gibeytech")
 local execution_plan = ExecutionPlanBuilder.build(installation_plan, {
@@ -20,4 +20,4 @@ print("Actions normalisées : " .. tostring(execution_plan:countActions()))
 print("Mode                : " .. tostring(execution_plan:getMode()))
 
 print("")
-print("RC1-23 OK : ExecutionPlan construit depuis InstallationPlan.")
+print("RC1-24 OK : ExecutionPlan construit depuis InstallationPlan.")

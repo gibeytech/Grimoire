@@ -99,7 +99,7 @@ local function print_execution_summary(execution)
     print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end
 
-print("== RC1-23 Vertical Slice ==")
+print("== RC1-24 Vertical Slice ==")
 print("Manifest : " .. manifest_path)
 print("Dry-run  : " .. tostring(dry_run))
 print("")
@@ -159,4 +159,4 @@ print("[8/8] Résumé final")
 print_execution_summary(execution)
 
 print("")
-print("RC1-23 OK : ExecutionPlan branché dans le Vertical Slice.")
+print("RC1-24 OK : ExecutionPlan branché dans le Vertical Slice.")

@@ -1,8 +1,4 @@
-local PackageManager = require("installer.managers.package_manager")
-local ServiceManager = require("installer.managers.service_manager")
-local DeployManager = require("installer.managers.deploy_manager")
-local ShellManager = require("installer.managers.shell_manager")
-local AssetManager = require("installer.managers.asset_manager")
+local ActionDispatcher = require("installer.action_dispatcher")
 
 local Executor = {}
 
@@ -12,14 +8,6 @@ local function execution_mode(dry_run)
     end
 
     return "apply-safe"
-end
-
-local function get_installation_plan(plan)
-    if plan and type(plan.getInstallationPlan) == "function" then
-        return plan:getInstallationPlan()
-    end
-
-    return plan
 end
 
 local function failure_result(dry_run, failed_result, results)
@@ -34,23 +22,22 @@ local function failure_result(dry_run, failed_result, results)
     }
 end
 
-local function run_step(results, step)
-    local result = step()
+local function count_executed_actions(results)
+    local total = 0
 
-    table.insert(results, result)
-
-    if not result.ok then
-        return false, result
+    for _, result in ipairs(results or {}) do
+        if result.details and result.details.action and result.details.action.executed == true then
+            total = total + 1
+        end
     end
 
-    return true, result
+    return total
 end
 
-function Executor.run(plan, options)
+function Executor.run(execution_plan, options)
     options = options or {}
 
     local dry_run = options.dry_run ~= false
-    local installation_plan = get_installation_plan(plan)
     local results = {}
 
     print("== Grimoire V3 Executor ==")
@@ -59,49 +46,31 @@ function Executor.run(plan, options)
         print("[Executor] Mode dry-run actif")
     else
         print("[Executor] Mode apply sécurisé actif")
-        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-23")
+        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-24")
     end
 
-    local ok, failed_result
-
-    ok, failed_result = run_step(results, function()
-        return PackageManager.install(installation_plan, options)
-    end)
-
-    if not ok then
-        return failure_result(dry_run, failed_result, results)
+    if not execution_plan or type(execution_plan.getActions) ~= "function" then
+        return {
+            ok = false,
+            dry_run = dry_run,
+            mode = execution_mode(dry_run),
+            failed_at = "executor",
+            results = results,
+            error = "Executor attend un ExecutionPlan",
+            executed_actions = 0,
+        }
     end
 
-    ok, failed_result = run_step(results, function()
-        return ServiceManager.enable(installation_plan, options)
-    end)
+    for index, action in ipairs(execution_plan:getActions() or {}) do
+        print("")
+        print("[Executor] Action " .. tostring(index) .. "/" .. tostring(execution_plan:countActions()))
 
-    if not ok then
-        return failure_result(dry_run, failed_result, results)
-    end
+        local result = ActionDispatcher.dispatch(action, options)
+        table.insert(results, result)
 
-    ok, failed_result = run_step(results, function()
-        return ShellManager.deploy(installation_plan, options)
-    end)
-
-    if not ok then
-        return failure_result(dry_run, failed_result, results)
-    end
-
-    ok, failed_result = run_step(results, function()
-        return AssetManager.deploy(installation_plan, options)
-    end)
-
-    if not ok then
-        return failure_result(dry_run, failed_result, results)
-    end
-
-    ok, failed_result = run_step(results, function()
-        return DeployManager.deploy(installation_plan, options)
-    end)
-
-    if not ok then
-        return failure_result(dry_run, failed_result, results)
+        if not result.ok then
+            return failure_result(dry_run, result, results)
+        end
     end
 
     return {
@@ -109,12 +78,12 @@ function Executor.run(plan, options)
         dry_run = dry_run,
         mode = execution_mode(dry_run),
         results = results,
-        executed_actions = 0,
+        executed_actions = count_executed_actions(results),
     }
 end
 
-function Executor.execute(plan, options)
-    return Executor.run(plan, options)
+function Executor.execute(execution_plan, options)
+    return Executor.run(execution_plan, options)
 end
 
 return Executor
