@@ -19,12 +19,12 @@ end
 local function collect_packages(plan)
     local packages = {}
 
-    if not plan or not plan.packages then
+    if not plan or not plan.packages or not plan.packages.groups then
         return packages
     end
 
-    for _, group in ipairs(plan.packages.groups or {}) do
-        for _, package in ipairs(group.packages or {}) do
+    for _, group_packages in pairs(plan.packages.groups) do
+        for _, package in ipairs(group_packages or {}) do
             table.insert(packages, package)
         end
     end
@@ -75,7 +75,7 @@ function PackageManager.install(plan, options)
     else
         print("")
         print("[PackageManager] Mode réel demandé")
-        print("[PackageManager] Exécution réelle non activée en RC1-08")
+        print("[PackageManager] Exécution réelle non activée en RC1-11")
         print("[PackageManager] Commande préparée :")
         print(command)
     end

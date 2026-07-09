@@ -42,4 +42,16 @@ function Preview.summary(plan)
     return table.concat(lines, "\n")
 end
 
+function Preview.show(plan)
+    print(Preview.summary(plan))
+end
+
+function Preview.render(plan)
+    return Preview.summary(plan)
+end
+
+function Preview.preview(plan)
+    return Preview.summary(plan)
+end
+
 return Preview

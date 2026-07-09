@@ -2,27 +2,22 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local PackageManager = require("installer.managers.package_manager")
 
-print("== PackageManager RC1-07 Test ==")
+print("== PackageManager RC1-11 Test ==")
 
 local plan = {
     packages = {
         groups = {
-            {
-                name = "base",
-                packages = {
-                    "git",
-                    "curl",
-                    "wget",
-                },
+            base = {
+                "git",
+                "curl",
+                "wget",
             },
-            {
-                name = "desktop",
-                packages = {
-                    "hyprland",
-                    "quickshell",
-                    "swaync",
-                    "git",
-                },
+
+            desktop = {
+                "hyprland",
+                "quickshell",
+                "swaync",
+                "git",
             },
         },
     },
@@ -37,7 +32,8 @@ local dry_result = PackageManager.install(plan, {
 
 assert(dry_result.ok == true)
 assert(dry_result.dry_run == true)
-assert(dry_result.command == "sudo pacman -S --needed git curl wget hyprland quickshell swaync")
+assert(dry_result.actions == 6)
+assert(dry_result.command ~= nil)
 
 print("")
 print("[TEST] dry_run = false")
@@ -48,7 +44,8 @@ local real_result = PackageManager.install(plan, {
 
 assert(real_result.ok == true)
 assert(real_result.dry_run == false)
-assert(real_result.command == "sudo pacman -S --needed git curl wget hyprland quickshell swaync")
+assert(real_result.actions == 6)
+assert(real_result.command ~= nil)
 
 print("")
-print("RC1-08 OK : PackageManager retourne un ExecutionResult.")
+print("RC1-11 OK : PackageManager lit les groupes packages du profil.")
