@@ -31,7 +31,7 @@ function FileOperations.run(operation, options)
         print("[FileOperations] Dry-run : opération préparée")
     elseif result.mode == "apply-safe" then
         print("[FileOperations] Apply sécurisé : opération préparée mais non exécutée")
-        print("[FileOperations] Action fichier bloquée volontairement en RC1-22")
+        print("[FileOperations] Action fichier bloquée volontairement en RC1-23")
     else
         return {
             ok = false,

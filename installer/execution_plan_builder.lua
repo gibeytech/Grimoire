@@ -115,11 +115,13 @@ function ExecutionPlanBuilder.build(plan, options)
     add_asset_actions(actions, plan)
     add_deploy_actions(actions, plan)
 
-    return ExecutionPlan:new({
+       return ExecutionPlan:new({
         profile = plan:getProfile(),
         mode = execution_mode(options),
         actions = actions,
+        installation_plan = plan,
     })
-end
+
+   end
 
 return ExecutionPlanBuilder

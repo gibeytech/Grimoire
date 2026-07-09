@@ -4,6 +4,7 @@ local ProfileLoader = require("core.loader.profile_loader")
 local ProfileValidator = require("core.validator.profile_validator")
 local Builder = require("installer.builder")
 local InstallationPlanValidator = require("installer.validator.installation_plan_validator")
+local ExecutionPlanBuilder = require("installer.execution_plan_builder")
 local Preview = require("installer.preview")
 local Executor = require("installer.executor")
 
@@ -98,56 +99,64 @@ local function print_execution_summary(execution)
     print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end
 
-print("== RC1-22 Vertical Slice ==")
+print("== RC1-23 Vertical Slice ==")
 print("Manifest : " .. manifest_path)
 print("Dry-run  : " .. tostring(dry_run))
 print("")
 
-print("[1/7] Chargement du manifest")
+print("[1/8] Chargement du manifest")
 local profile = assert_ok(
     call(ProfileLoader, { "load", "load_profile", "from_file" }, profile_name),
     "Chargement du profile"
 )
 
-print("[2/7] Validation du profile")
+print("[2/8] Validation du profile")
 assert_ok(
     call(ProfileValidator, { "validate", "validate_profile" }, profile),
     "Validation du profile"
 )
 
-print("[3/7] Construction du plan")
-local plan = assert_ok(
+print("[3/8] Construction du InstallationPlan")
+local installation_plan = assert_ok(
     call(Builder, { "build", "build_plan" }, profile_name),
-    "Construction du plan"
+    "Construction du InstallationPlan"
 )
 
-print("[4/7] Validation du plan")
+print("[4/8] Validation du InstallationPlan")
 assert_ok(
-    call(InstallationPlanValidator, { "validate", "validate_plan" }, plan),
-    "Validation du plan"
+    call(InstallationPlanValidator, { "validate", "validate_plan" }, installation_plan),
+    "Validation du InstallationPlan"
 )
 
-print("[5/7] Preview")
+print("[5/8] Construction du ExecutionPlan")
+local execution_plan = assert_ok(
+    call(ExecutionPlanBuilder, { "build" }, installation_plan, {
+        dry_run = dry_run,
+    }),
+    "Construction du ExecutionPlan"
+)
+
+print("[6/8] Preview")
 if type(Preview.show) == "function" then
-    Preview.show(plan)
+    Preview.show(installation_plan, execution_plan)
 elseif type(Preview.render) == "function" then
-    print(Preview.render(plan))
+    print(Preview.render(installation_plan, execution_plan))
 elseif type(Preview.summary) == "function" then
-    print(Preview.summary(plan))
+    print(Preview.summary(installation_plan, execution_plan))
 else
     print("[Preview] Aucune méthode preview trouvée, étape ignorée")
 end
 
-print("[6/7] Executor")
+print("[7/8] Executor")
 local execution = assert_ok(
-    call(Executor, { "execute", "run" }, plan, {
+    call(Executor, { "execute", "run" }, execution_plan, {
         dry_run = dry_run,
     }),
     "Exécution"
 )
 
-print("[7/7] Résumé final")
+print("[8/8] Résumé final")
 print_execution_summary(execution)
 
 print("")
-print("RC1-22 OK : Mode apply sécurisé sans action système réelle.")
+print("RC1-23 OK : ExecutionPlan branché dans le Vertical Slice.")

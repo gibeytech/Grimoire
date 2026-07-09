@@ -9,6 +9,7 @@ function ExecutionPlan:new(data)
     plan.profile = data.profile or {}
     plan.mode = data.mode or "dry-run"
     plan.actions = data.actions or {}
+    plan.installation_plan = data.installation_plan
 
     return plan
 end
@@ -27,6 +28,10 @@ end
 
 function ExecutionPlan:countActions()
     return #self.actions
+end
+
+function ExecutionPlan:getInstallationPlan()
+    return self.installation_plan
 end
 
 return ExecutionPlan

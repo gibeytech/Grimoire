@@ -14,6 +14,14 @@ local function execution_mode(dry_run)
     return "apply-safe"
 end
 
+local function get_installation_plan(plan)
+    if plan and type(plan.getInstallationPlan) == "function" then
+        return plan:getInstallationPlan()
+    end
+
+    return plan
+end
+
 local function failure_result(dry_run, failed_result, results)
     return {
         ok = false,
@@ -42,6 +50,7 @@ function Executor.run(plan, options)
     options = options or {}
 
     local dry_run = options.dry_run ~= false
+    local installation_plan = get_installation_plan(plan)
     local results = {}
 
     print("== Grimoire V3 Executor ==")
@@ -50,13 +59,13 @@ function Executor.run(plan, options)
         print("[Executor] Mode dry-run actif")
     else
         print("[Executor] Mode apply sécurisé actif")
-        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-22")
+        print("[Executor] Aucune action système réelle ne sera exécutée en RC1-23")
     end
 
     local ok, failed_result
 
     ok, failed_result = run_step(results, function()
-        return PackageManager.install(plan, options)
+        return PackageManager.install(installation_plan, options)
     end)
 
     if not ok then
@@ -64,7 +73,7 @@ function Executor.run(plan, options)
     end
 
     ok, failed_result = run_step(results, function()
-        return ServiceManager.enable(plan, options)
+        return ServiceManager.enable(installation_plan, options)
     end)
 
     if not ok then
@@ -72,7 +81,7 @@ function Executor.run(plan, options)
     end
 
     ok, failed_result = run_step(results, function()
-        return ShellManager.deploy(plan, options)
+        return ShellManager.deploy(installation_plan, options)
     end)
 
     if not ok then
@@ -80,7 +89,7 @@ function Executor.run(plan, options)
     end
 
     ok, failed_result = run_step(results, function()
-        return AssetManager.deploy(plan, options)
+        return AssetManager.deploy(installation_plan, options)
     end)
 
     if not ok then
@@ -88,7 +97,7 @@ function Executor.run(plan, options)
     end
 
     ok, failed_result = run_step(results, function()
-        return DeployManager.deploy(plan, options)
+        return DeployManager.deploy(installation_plan, options)
     end)
 
     if not ok then

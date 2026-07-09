@@ -57,7 +57,7 @@ function ShellManager.deploy(plan, options)
     else
         print("")
         print("[ShellManager] Apply sécurisé : shell préparé mais non déployé")
-        print("[ShellManager] Action système bloquée volontairement en RC1-22")
+        print("[ShellManager] Action système bloquée volontairement en RC1-23")
     end
 
     return ExecutionResult.ok("shell", {

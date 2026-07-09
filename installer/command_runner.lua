@@ -32,7 +32,7 @@ function CommandRunner.run(command, options)
         print(command)
     elseif result.mode == "apply-safe" then
         print("[CommandRunner] Apply sécurisé : commande préparée mais non exécutée")
-        print("[CommandRunner] Action système bloquée volontairement en RC1-22")
+        print("[CommandRunner] Action système bloquée volontairement en RC1-23")
         print("[CommandRunner] Commande préparée :")
         print(command)
     else
