@@ -61,8 +61,8 @@ function AssetManager.deploy(plan, options)
         print("[AssetManager] Dry-run : aucun asset copié")
     else
         print("")
-        print("[AssetManager] Mode réel demandé")
-        print("[AssetManager] Exécution réelle non activée en RC1-15")
+        print("[AssetManager] Apply sécurisé : assets préparés mais non copiés")
+        print("[AssetManager] Action système bloquée volontairement en RC1-18")
     end
 
     return ExecutionResult.ok("assets", {

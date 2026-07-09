@@ -56,8 +56,8 @@ function ShellManager.deploy(plan, options)
         print("[ShellManager] Dry-run : aucun déploiement shell exécuté")
     else
         print("")
-        print("[ShellManager] Mode réel demandé")
-        print("[ShellManager] Exécution réelle non activée en RC1-14")
+        print("[ShellManager] Apply sécurisé : shell préparé mais non déployé")
+        print("[ShellManager] Action système bloquée volontairement en RC1-18")
     end
 
     return ExecutionResult.ok("shell", {

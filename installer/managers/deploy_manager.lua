@@ -70,8 +70,8 @@ function DeployManager.deploy(plan, options)
         print("[DeployManager] Dry-run : aucune configuration copiée")
     else
         print("")
-        print("[DeployManager] Mode réel demandé")
-        print("[DeployManager] Exécution réelle non activée en RC1-16")
+        print("[DeployManager] Apply sécurisé : dotfiles préparés mais non liés")
+        print("[DeployManager] Action système bloquée volontairement en RC1-18")
     end
 
     return ExecutionResult.ok("deploy", {

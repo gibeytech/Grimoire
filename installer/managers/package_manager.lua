@@ -124,8 +124,8 @@ function PackageManager.install(plan, options)
         print(command)
     else
         print("")
-        print("[PackageManager] Mode réel demandé")
-        print("[PackageManager] Exécution réelle non activée en RC1-12")
+        print("[PackageManager] Apply sécurisé : commande préparée mais non exécutée")
+        print("[PackageManager] Action système bloquée volontairement en RC1-18")
         print("[PackageManager] Commande préparée :")
         print(command)
     end

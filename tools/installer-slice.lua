@@ -73,6 +73,7 @@ local function print_execution_summary(execution)
     print("== Résumé Grimoire V3 ==")
     print("OK      : " .. tostring(execution.ok))
     print("Dry-run : " .. tostring(execution.dry_run))
+    print("Mode    : " .. tostring(execution.mode or "unknown"))
 
     if execution.failed_at then
         print("Échec   : " .. tostring(execution.failed_at))
@@ -94,9 +95,10 @@ local function print_execution_summary(execution)
 
     print("")
     print("Total actions préparées : " .. tostring(total_actions))
+    print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end
 
-print("== RC1-17 Vertical Slice ==")
+print("== RC1-18 Vertical Slice ==")
 print("Manifest : " .. manifest_path)
 print("Dry-run  : " .. tostring(dry_run))
 print("")
@@ -148,4 +150,4 @@ print("[7/7] Résumé final")
 print_execution_summary(execution)
 
 print("")
-print("RC1-17 OK : Résumé final enrichi du Vertical Slice.")
+print("RC1-18 OK : Mode apply sécurisé sans action système réelle.")

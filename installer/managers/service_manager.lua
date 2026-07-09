@@ -72,8 +72,8 @@ function ServiceManager.enable(plan, options)
         print("[ServiceManager] Dry-run : aucune action systemctl exécutée")
     else
         print("")
-        print("[ServiceManager] Mode réel demandé")
-        print("[ServiceManager] Exécution réelle non activée en RC1-13")
+        print("[ServiceManager] Apply sécurisé : services préparés mais non modifiés")
+        print("[ServiceManager] Action systemctl bloquée volontairement en RC1-18")
     end
 
     return ExecutionResult.ok("services", {
