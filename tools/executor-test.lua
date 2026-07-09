@@ -1,29 +1,35 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+local Builder = require("installer.builder")
+local ExecutionPlanBuilder = require("installer.execution_plan_builder")
 local Executor = require("installer.executor")
 
-print("== Executor RC1-08 Test ==")
+print("== Executor RC2-01 Test ==")
 
-local plan = {
-    packages = {
-        groups = {},
-    },
-}
+local installation_plan = Builder.build("gibeytech")
+local execution_plan = ExecutionPlanBuilder.build(installation_plan, {
+    dry_run = true,
+})
 
-local result = Executor.execute(plan, {
+local result = Executor.execute(execution_plan, {
     dry_run = true,
 })
 
 assert(result.ok == true)
 assert(result.dry_run == true)
+assert(result.mode == "dry-run")
 assert(type(result.results) == "table")
-assert(#result.results == 5)
+assert(#result.results == execution_plan:countActions())
+assert(result.executed_actions == 0)
 
 assert(result.results[1].manager == "packages")
-assert(result.results[2].manager == "services")
-assert(result.results[3].manager == "shell")
-assert(result.results[4].manager == "assets")
-assert(result.results[5].manager == "deploy")
+assert(result.results[1].details.runner.prepared == true)
+assert(result.results[1].details.runner.simulated == true)
+assert(result.results[1].details.runner.executed == false)
 
 print("")
-print("RC1-08 OK : Executor agrège les ExecutionResult des managers.")
+print("Actions exécutées : " .. tostring(#result.results))
+print("Mode              : " .. tostring(result.mode))
+
+print("")
+print("RC2-01 OK : Executor exécute un ExecutionPlan normalisé.")
