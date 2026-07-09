@@ -1,5 +1,6 @@
 local CommandRunner = require("installer.command_runner")
 local FileOperations = require("installer.file_operations")
+local ServiceOperation = require("installer.service_operation")
 local ExecutionResult = require("installer.result.execution_result")
 
 local ActionDispatcher = {}
@@ -63,26 +64,28 @@ local function dispatch_file_operation(action, options)
 end
 
 local function dispatch_service_operation(action, options)
-    local dry_run = options.dry_run ~= false
-
     print("[ActionDispatcher] Service : " .. action_label(action))
-    print("[ServiceOperation] " .. tostring(action.operation) .. " : " .. tostring(action.service))
 
-    if dry_run then
-        print("[ServiceOperation] Dry-run : aucune action systemctl exécutée")
-    else
-        print("[ServiceOperation] Apply sécurisé : service préparé mais non modifié")
-        print("[ServiceOperation] Action systemctl bloquée volontairement en RC1-25")
+    local service_result = ServiceOperation.run(action, options)
+
+    if not service_result.ok then
+        return ExecutionResult.fail(action.manager, service_result.error, {
+            dry_run = options.dry_run ~= false,
+            actions = 1,
+            details = {
+                action = action,
+                service = service_result,
+            },
+        })
     end
 
     return ExecutionResult.ok(action.manager, {
-        dry_run = dry_run,
+        dry_run = options.dry_run ~= false,
         actions = 1,
         details = {
             action = action,
-            service = action.service,
-            operation = action.operation,
-            executed = false,
+            service = service_result,
+            operation = service_result.operation,
         },
     })
 end
