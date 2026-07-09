@@ -62,7 +62,7 @@ function AssetManager.deploy(plan, options)
     else
         print("")
         print("[AssetManager] Apply sécurisé : assets préparés mais non copiés")
-        print("[AssetManager] Action système bloquée volontairement en RC1-19")
+        print("[AssetManager] Action système bloquée volontairement en RC1-20")
     end
 
     return ExecutionResult.ok("assets", {
