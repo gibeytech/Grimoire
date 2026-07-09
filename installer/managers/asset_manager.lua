@@ -1,4 +1,5 @@
 local ExecutionResult = require("installer.result.execution_result")
+local FileOperations = require("installer.file_operations")
 
 local AssetManager = {}
 
@@ -12,6 +13,7 @@ local function collect_assets(assets)
     for name, config in pairs(assets) do
         table.insert(result, {
             name = name,
+            type = "copy",
             source = config.source,
             destination = config.destination,
         })
@@ -24,11 +26,21 @@ local function collect_assets(assets)
     return result
 end
 
+local function build_operation(asset)
+    return {
+        type = asset.type,
+        name = asset.name,
+        source = asset.source,
+        destination = asset.destination,
+    }
+end
+
 function AssetManager.deploy(plan, options)
     options = options or {}
 
     local dry_run = options.dry_run ~= false
     local assets = collect_assets(plan and plan.assets)
+    local operations = {}
 
     print("[AssetManager] Déploiement des assets...")
 
@@ -40,6 +52,7 @@ function AssetManager.deploy(plan, options)
             actions = 0,
             details = {
                 assets = {},
+                operations = {},
             },
         })
     end
@@ -54,15 +67,22 @@ function AssetManager.deploy(plan, options)
         end
 
         print(line)
-    end
 
-    if dry_run then
-        print("")
-        print("[AssetManager] Dry-run : aucun asset copié")
-    else
-        print("")
-        print("[AssetManager] Apply sécurisé : assets préparés mais non copiés")
-        print("[AssetManager] Action système bloquée volontairement en RC1-20")
+        local operation = build_operation(asset)
+        local operation_result = FileOperations.run(operation, options)
+
+        if not operation_result.ok then
+            return ExecutionResult.fail("assets", operation_result.error, {
+                dry_run = dry_run,
+                actions = 0,
+                details = {
+                    assets = assets,
+                    operations = operations,
+                },
+            })
+        end
+
+        table.insert(operations, operation_result)
     end
 
     return ExecutionResult.ok("assets", {
@@ -70,6 +90,7 @@ function AssetManager.deploy(plan, options)
         actions = #assets,
         details = {
             assets = assets,
+            operations = operations,
         },
     })
 end
