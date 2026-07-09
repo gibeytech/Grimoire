@@ -27,4 +27,8 @@ function Executor.execute(plan, options)
     return Executor.run(plan, options)
 end
 
+function Executor.execute(plan, options)
+    return Executor.run(plan, options)
+end
+
 return Executor
