@@ -12,7 +12,9 @@ local function resolve_runner_result(action, result)
    local action_type = action and action.type or nil
    local result_key = RUNNER_RESULT_KEYS[action_type]
 
-   if result_key and type(details[result_key]) == "table" then
+   if result_key
+      and type(details[result_key]) == "table"
+   then
       return details[result_key]
    end
 
@@ -28,13 +30,18 @@ local function resolve_system_result(runner_result)
       return runner_result.system
    end
 
-   if type(runner_result.system_result) ~= "table" then
+   if type(runner_result.system_result)
+      ~= "table"
+   then
       return nil
    end
 
-   local filesystem_result = runner_result.system_result
+   local filesystem_result =
+      runner_result.system_result
 
-   if type(filesystem_result.system_result) == "table" then
+   if type(filesystem_result.system_result)
+      == "table"
+   then
       return filesystem_result.system_result
    end
 
@@ -48,8 +55,55 @@ local function resolve_system_result(runner_result)
    return nil
 end
 
-local function resolve_command(action, result, runner_result)
-   if runner_result and runner_result.command ~= nil then
+local function clone_table(value)
+   if type(value) ~= "table" then
+      return nil
+   end
+
+   local clone = {}
+
+   for key, item in pairs(value) do
+      clone[key] = item
+   end
+
+   return clone
+end
+
+local function resolve_compensation(runner_result)
+   if type(runner_result) ~= "table" then
+      return nil
+   end
+
+   if type(runner_result.compensation)
+      == "table"
+   then
+      return clone_table(
+         runner_result.compensation
+      )
+   end
+
+   if type(runner_result.system_result)
+      == "table"
+      and type(
+         runner_result.system_result.compensation
+      ) == "table"
+   then
+      return clone_table(
+         runner_result.system_result.compensation
+      )
+   end
+
+   return nil
+end
+
+local function resolve_command(
+   action,
+   result,
+   runner_result
+)
+   if runner_result
+      and runner_result.command ~= nil
+   then
       return runner_result.command
    end
 
@@ -64,8 +118,13 @@ local function resolve_command(action, result, runner_result)
    return nil
 end
 
-local function resolve_exit_code(runner_result, system_result)
-   if runner_result and runner_result.exit_code ~= nil then
+local function resolve_exit_code(
+   runner_result,
+   system_result
+)
+   if runner_result
+      and runner_result.exit_code ~= nil
+   then
       return runner_result.exit_code
    end
 
@@ -76,8 +135,13 @@ local function resolve_exit_code(runner_result, system_result)
    return nil
 end
 
-local function resolve_reason(runner_result, system_result)
-   if runner_result and runner_result.reason ~= nil then
+local function resolve_reason(
+   runner_result,
+   system_result
+)
+   if runner_result
+      and runner_result.reason ~= nil
+   then
       return runner_result.reason
    end
 
@@ -140,7 +204,8 @@ function ExecutionJournal.create_entry(
          or result.manager
          or "unknown",
       name = action.name or "unknown",
-      mode = runner_result and runner_result.mode
+      mode = runner_result
+         and runner_result.mode
          or context.mode
          or "unknown",
       ok = result.ok == true,
@@ -173,6 +238,9 @@ function ExecutionJournal.create_entry(
       stderr = resolve_stream(
          system_result,
          "stderr"
+      ),
+      compensation = resolve_compensation(
+         runner_result
       ),
       error = resolve_error(
          result,

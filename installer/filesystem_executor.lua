@@ -1,386 +1,433 @@
 local SystemExecutor = require("installer.system_executor")
+local CompensationMetadata = require(
+   "installer.result.compensation_metadata"
+)
 
 local FilesystemExecutor = {}
 
 local SUPPORTED_OPERATIONS = {
-    copy = true,
-    symlink = true,
-    mkdir = true,
+   copy = true,
+   symlink = true,
+   mkdir = true,
 }
 
 local function shell_quote(value)
-    local string_value = tostring(value)
+   local string_value = tostring(value)
 
-    return "'" .. string_value:gsub("'", "'\\''") .. "'"
+   return "'" .. string_value:gsub("'", "'\\''") .. "'"
 end
 
 local function value_is_present(value)
-    return value ~= nil and tostring(value) ~= ""
+   return value ~= nil and tostring(value) ~= ""
 end
 
 local function resolve_overwrite(operation)
-    return operation.overwrite == true
+   return operation.overwrite == true
 end
 
-local function create_invalid_result(operation, error_message)
-    return {
-        ok = false,
-        operation = operation,
-        command = nil,
-        executed = false,
-        exit_code = nil,
-        reason = nil,
-        system_result = nil,
-        parent_directory = nil,
-        parent_result = nil,
-        overwrite = false,
-        error = error_message,
-    }
+local function create_invalid_result(
+   operation,
+   error_message
+)
+   return {
+      ok = false,
+      operation = operation,
+      command = nil,
+      executed = false,
+      exit_code = nil,
+      reason = nil,
+      system_result = nil,
+      parent_directory = nil,
+      parent_result = nil,
+      overwrite = false,
+      compensation = CompensationMetadata.invalid(
+         operation,
+         error_message
+      ),
+      error = error_message,
+   }
 end
 
 local function validate_source_and_destination(operation)
-    if not value_is_present(operation.source) then
-        return false, "Source d'opération filesystem manquante"
-    end
+   if not value_is_present(operation.source) then
+      return false,
+         "Source d'opération filesystem manquante"
+   end
 
-    if not value_is_present(operation.destination) then
-        return false, "Destination d'opération filesystem manquante"
-    end
+   if not value_is_present(operation.destination) then
+      return false,
+         "Destination d'opération filesystem manquante"
+   end
 
-    return true, nil
+   return true, nil
 end
 
 local function validate_destination(operation)
-    if not value_is_present(operation.destination) then
-        return false, "Destination d'opération filesystem manquante"
-    end
+   if not value_is_present(operation.destination) then
+      return false,
+         "Destination d'opération filesystem manquante"
+   end
 
-    return true, nil
+   return true, nil
 end
 
 local function validate_overwrite(operation)
-    if operation.overwrite == nil then
-        return true, nil
-    end
+   if operation.overwrite == nil then
+      return true, nil
+   end
 
-    if type(operation.overwrite) ~= "boolean" then
-        return false, "La politique overwrite doit être un booléen"
-    end
+   if type(operation.overwrite) ~= "boolean" then
+      return false,
+         "La politique overwrite doit être un booléen"
+   end
 
-    return true, nil
+   return true, nil
 end
 
 local function validate_operation(operation)
-    if type(operation) ~= "table" then
-        return false, "Opération filesystem invalide"
-    end
+   if type(operation) ~= "table" then
+      return false, "Opération filesystem invalide"
+   end
 
-    if not value_is_present(operation.type) then
-        return false, "Type d'opération filesystem manquant"
-    end
+   if not value_is_present(operation.type) then
+      return false,
+         "Type d'opération filesystem manquant"
+   end
 
-    if not SUPPORTED_OPERATIONS[operation.type] then
-        return false, "Type d'opération filesystem inconnu: "
+   if not SUPPORTED_OPERATIONS[operation.type] then
+      return false,
+         "Type d'opération filesystem inconnu: "
             .. tostring(operation.type)
-    end
+   end
 
-    local overwrite_valid, overwrite_error = validate_overwrite(
-        operation
-    )
+   local overwrite_valid, overwrite_error =
+      validate_overwrite(operation)
 
-    if not overwrite_valid then
-        return false, overwrite_error
-    end
+   if not overwrite_valid then
+      return false, overwrite_error
+   end
 
-    if operation.type == "copy" or operation.type == "symlink" then
-        return validate_source_and_destination(operation)
-    end
+   if operation.type == "copy"
+      or operation.type == "symlink"
+   then
+      return validate_source_and_destination(operation)
+   end
 
-    if operation.type == "mkdir" then
-        return validate_destination(operation)
-    end
+   if operation.type == "mkdir" then
+      return validate_destination(operation)
+   end
 
-    return false, "Contrat d'opération filesystem introuvable: "
-        .. tostring(operation.type)
+   return false,
+      "Contrat d'opération filesystem introuvable: "
+         .. tostring(operation.type)
 end
 
 local function normalize_destination(destination)
-    local normalized = tostring(destination)
+   local normalized = tostring(destination)
 
-    while #normalized > 1 and normalized:sub(-1) == "/" do
-        normalized = normalized:sub(1, -2)
-    end
+   while #normalized > 1
+      and normalized:sub(-1) == "/"
+   do
+      normalized = normalized:sub(1, -2)
+   end
 
-    return normalized
+   return normalized
 end
 
 local function resolve_parent_directory(destination)
-    local normalized = normalize_destination(destination)
-    local parent = normalized:match("^(.*)/[^/]+$")
+   local normalized = normalize_destination(destination)
+   local parent = normalized:match("^(.*)/[^/]+$")
 
-    if parent == nil then
-        return "."
-    end
+   if parent == nil then
+      return "."
+   end
 
-    if parent == "" then
-        return "/"
-    end
+   if parent == "" then
+      return "/"
+   end
 
-    return parent
+   return parent
 end
 
 local function operation_requires_parent(operation)
-    return operation.type == "copy"
-        or operation.type == "symlink"
+   return operation.type == "copy"
+      or operation.type == "symlink"
 end
 
 local function build_destination_guard(destination)
-    local quoted_destination = shell_quote(destination)
+   local quoted_destination = shell_quote(destination)
 
-    return table.concat({
-        "if [ -e",
-        quoted_destination,
-        "] || [ -L",
-        quoted_destination,
-        "]; then",
-        "printf '%s\\n' 'Destination filesystem existante' >&2;",
-        "exit 73;",
-        "fi;",
-    }, " ")
+   return table.concat({
+      "if [ -e",
+      quoted_destination,
+      "] || [ -L",
+      quoted_destination,
+      "]; then",
+      "printf '%s\\n' 'Destination filesystem existante' >&2;",
+      "exit 73;",
+      "fi;",
+   }, " ")
 end
 
 local function build_copy_command(operation)
-    local copy_command
+   local copy_command
 
-    if resolve_overwrite(operation) then
-        copy_command = table.concat({
-            "cp",
-            "-R",
-            "-f",
-            "--",
-            shell_quote(operation.source),
-            shell_quote(operation.destination),
-        }, " ")
+   if resolve_overwrite(operation) then
+      copy_command = table.concat({
+         "cp",
+         "-R",
+         "-f",
+         "--",
+         shell_quote(operation.source),
+         shell_quote(operation.destination),
+      }, " ")
 
-        return copy_command
-    end
+      return copy_command
+   end
 
-    copy_command = table.concat({
-        "cp",
-        "-R",
-        "--",
-        shell_quote(operation.source),
-        shell_quote(operation.destination),
-    }, " ")
+   copy_command = table.concat({
+      "cp",
+      "-R",
+      "--",
+      shell_quote(operation.source),
+      shell_quote(operation.destination),
+   }, " ")
 
-    return build_destination_guard(operation.destination)
-        .. " "
-        .. copy_command
+   return build_destination_guard(operation.destination)
+      .. " "
+      .. copy_command
 end
 
 local function build_symlink_command(operation)
-    local symlink_command
+   local symlink_command
 
-    if resolve_overwrite(operation) then
-        symlink_command = table.concat({
-            "ln",
-            "-s",
-            "-f",
-            "-n",
-            "-T",
-            "--",
-            shell_quote(operation.source),
-            shell_quote(operation.destination),
-        }, " ")
+   if resolve_overwrite(operation) then
+      symlink_command = table.concat({
+         "ln",
+         "-s",
+         "-f",
+         "-n",
+         "-T",
+         "--",
+         shell_quote(operation.source),
+         shell_quote(operation.destination),
+      }, " ")
 
-        return symlink_command
-    end
+      return symlink_command
+   end
 
-    symlink_command = table.concat({
-        "ln",
-        "-s",
-        "--",
-        shell_quote(operation.source),
-        shell_quote(operation.destination),
-    }, " ")
+   symlink_command = table.concat({
+      "ln",
+      "-s",
+      "--",
+      shell_quote(operation.source),
+      shell_quote(operation.destination),
+   }, " ")
 
-    return build_destination_guard(operation.destination)
-        .. " "
-        .. symlink_command
+   return build_destination_guard(operation.destination)
+      .. " "
+      .. symlink_command
 end
 
 local function build_mkdir_command(operation)
-    return table.concat({
-        "mkdir",
-        "-p",
-        "--",
-        shell_quote(operation.destination),
-    }, " ")
+   return table.concat({
+      "mkdir",
+      "-p",
+      "--",
+      shell_quote(operation.destination),
+   }, " ")
 end
 
 local function build_command(operation)
-    if operation.type == "copy" then
-        return build_copy_command(operation)
-    end
+   if operation.type == "copy" then
+      return build_copy_command(operation)
+   end
 
-    if operation.type == "symlink" then
-        return build_symlink_command(operation)
-    end
+   if operation.type == "symlink" then
+      return build_symlink_command(operation)
+   end
 
-    if operation.type == "mkdir" then
-        return build_mkdir_command(operation)
-    end
+   if operation.type == "mkdir" then
+      return build_mkdir_command(operation)
+   end
 
-    return nil
+   return nil
 end
 
 local function create_execution_result(
-    operation,
-    command,
-    system_result,
-    parent_directory,
-    parent_result
+   operation,
+   command,
+   system_result,
+   parent_directory,
+   parent_result
 )
-    return {
-        ok = system_result.ok,
-        operation = operation,
-        command = command,
-        executed = system_result.executed,
-        exit_code = system_result.exit_code,
-        reason = system_result.reason,
-        system_result = system_result,
-        parent_directory = parent_directory,
-        parent_result = parent_result,
-        overwrite = resolve_overwrite(operation),
-        error = system_result.error,
-    }
+   return {
+      ok = system_result.ok,
+      operation = operation,
+      command = command,
+      executed = system_result.executed,
+      exit_code = system_result.exit_code,
+      reason = system_result.reason,
+      system_result = system_result,
+      parent_directory = parent_directory,
+      parent_result = parent_result,
+      overwrite = resolve_overwrite(operation),
+      compensation = CompensationMetadata.complete(
+         operation,
+         system_result
+      ),
+      error = system_result.error,
+   }
 end
 
 local function create_parent_failure_result(
-    operation,
-    command,
-    parent_directory,
-    parent_result
+   operation,
+   command,
+   parent_directory,
+   parent_result
 )
-    return {
-        ok = false,
-        operation = operation,
-        command = command,
-        executed = parent_result.executed == true,
-        exit_code = parent_result.exit_code,
-        reason = parent_result.reason,
-        system_result = parent_result.system_result,
-        parent_directory = parent_directory,
-        parent_result = parent_result,
-        overwrite = resolve_overwrite(operation),
-        error = "Impossible de préparer le répertoire parent: "
-            .. tostring(parent_result.error),
-    }
+   local error_message =
+      "Impossible de préparer le répertoire parent: "
+         .. tostring(parent_result.error)
+
+   return {
+      ok = false,
+      operation = operation,
+      command = command,
+      executed = parent_result.executed == true,
+      exit_code = parent_result.exit_code,
+      reason = parent_result.reason,
+      system_result = parent_result.system_result,
+      parent_directory = parent_directory,
+      parent_result = parent_result,
+      overwrite = resolve_overwrite(operation),
+      compensation = CompensationMetadata.not_executed(
+         operation,
+         error_message
+      ),
+      error = error_message,
+   }
 end
 
 function FilesystemExecutor.prepare(operation)
-    local valid, validation_error = validate_operation(operation)
+   local valid, validation_error =
+      validate_operation(operation)
 
-    if not valid then
-        return create_invalid_result(operation, validation_error)
-    end
+   if not valid then
+      return create_invalid_result(
+         operation,
+         validation_error
+      )
+   end
 
-    local command = build_command(operation)
+   local command = build_command(operation)
 
-    if not command then
-        return create_invalid_result(
-            operation,
-            "Impossible de construire la commande filesystem"
-        )
-    end
+   if not command then
+      return create_invalid_result(
+         operation,
+         "Impossible de construire la commande filesystem"
+      )
+   end
 
-    local parent_directory = nil
+   local parent_directory = nil
 
-    if operation_requires_parent(operation) then
-        parent_directory = resolve_parent_directory(
-            operation.destination
-        )
-    end
+   if operation_requires_parent(operation) then
+      parent_directory = resolve_parent_directory(
+         operation.destination
+      )
+   end
 
-    return {
-        ok = true,
-        operation = operation,
-        command = command,
-        executed = false,
-        exit_code = nil,
-        reason = nil,
-        system_result = nil,
-        parent_directory = parent_directory,
-        parent_result = nil,
-        overwrite = resolve_overwrite(operation),
-        error = nil,
-    }
+   return {
+      ok = true,
+      operation = operation,
+      command = command,
+      executed = false,
+      exit_code = nil,
+      reason = nil,
+      system_result = nil,
+      parent_directory = parent_directory,
+      parent_result = nil,
+      overwrite = resolve_overwrite(operation),
+      compensation = CompensationMetadata.prepare(
+         operation
+      ),
+      error = nil,
+   }
 end
 
 function FilesystemExecutor.execute(operation)
-    local prepared_result = FilesystemExecutor.prepare(operation)
+   local prepared_result =
+      FilesystemExecutor.prepare(operation)
 
-    if not prepared_result.ok then
-        return prepared_result
-    end
+   if not prepared_result.ok then
+      return prepared_result
+   end
 
-    local parent_result = nil
+   local parent_result = nil
 
-    if prepared_result.parent_directory then
-        parent_result = FilesystemExecutor.mkdir(
-            prepared_result.parent_directory
-        )
+   if prepared_result.parent_directory then
+      parent_result = FilesystemExecutor.mkdir(
+         prepared_result.parent_directory
+      )
 
-        if not parent_result.ok then
-            return create_parent_failure_result(
-                operation,
-                prepared_result.command,
-                prepared_result.parent_directory,
-                parent_result
-            )
-        end
-    end
+      if not parent_result.ok then
+         return create_parent_failure_result(
+            operation,
+            prepared_result.command,
+            prepared_result.parent_directory,
+            parent_result
+         )
+      end
+   end
 
-    local system_result = SystemExecutor.execute(
-        prepared_result.command
-    )
+   local system_result = SystemExecutor.execute(
+      prepared_result.command
+   )
 
-    return create_execution_result(
-        operation,
-        prepared_result.command,
-        system_result,
-        prepared_result.parent_directory,
-        parent_result
-    )
+   return create_execution_result(
+      operation,
+      prepared_result.command,
+      system_result,
+      prepared_result.parent_directory,
+      parent_result
+   )
 end
 
-function FilesystemExecutor.copy(source, destination, options)
-    options = options or {}
+function FilesystemExecutor.copy(
+   source,
+   destination,
+   options
+)
+   options = options or {}
 
-    return FilesystemExecutor.execute({
-        type = "copy",
-        source = source,
-        destination = destination,
-        overwrite = options.overwrite,
-    })
+   return FilesystemExecutor.execute({
+      type = "copy",
+      source = source,
+      destination = destination,
+      overwrite = options.overwrite,
+   })
 end
 
-function FilesystemExecutor.symlink(source, destination, options)
-    options = options or {}
+function FilesystemExecutor.symlink(
+   source,
+   destination,
+   options
+)
+   options = options or {}
 
-    return FilesystemExecutor.execute({
-        type = "symlink",
-        source = source,
-        destination = destination,
-        overwrite = options.overwrite,
-    })
+   return FilesystemExecutor.execute({
+      type = "symlink",
+      source = source,
+      destination = destination,
+      overwrite = options.overwrite,
+   })
 end
 
 function FilesystemExecutor.mkdir(destination)
-    return FilesystemExecutor.execute({
-        type = "mkdir",
-        destination = destination,
-    })
+   return FilesystemExecutor.execute({
+      type = "mkdir",
+      destination = destination,
+   })
 end
 
 return FilesystemExecutor
