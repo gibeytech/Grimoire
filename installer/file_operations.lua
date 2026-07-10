@@ -1,11 +1,6 @@
-local SystemExecutor = require("installer.system_executor")
+local FilesystemExecutor = require("installer.filesystem_executor")
 
 local FileOperations = {}
-
-local SUPPORTED_OPERATIONS = {
-    copy = true,
-    symlink = true,
-}
 
 local function resolve_mode(options)
     options = options or {}
@@ -19,12 +14,6 @@ local function resolve_mode(options)
     end
 
     return "apply-safe"
-end
-
-local function shell_quote(value)
-    local string_value = tostring(value)
-
-    return "'" .. string_value:gsub("'", "'\\''") .. "'"
 end
 
 local function create_result(operation, mode)
@@ -55,66 +44,6 @@ local function create_invalid_result(operation, mode, error_message)
     }
 end
 
-local function value_is_present(value)
-    return value ~= nil and tostring(value) ~= ""
-end
-
-local function validate_operation(operation)
-    if type(operation) ~= "table" then
-        return false, "Opération fichier invalide"
-    end
-
-    if not value_is_present(operation.type) then
-        return false, "Type d'opération fichier manquant"
-    end
-
-    if not SUPPORTED_OPERATIONS[operation.type] then
-        return false, "Type d'opération fichier inconnu: " .. tostring(operation.type)
-    end
-
-    if not value_is_present(operation.source) then
-        return false, "Source d'opération fichier manquante"
-    end
-
-    if not value_is_present(operation.destination) then
-        return false, "Destination d'opération fichier manquante"
-    end
-
-    return true, nil
-end
-
-local function build_copy_command(operation)
-    return table.concat({
-        "cp",
-        "-R",
-        "--",
-        shell_quote(operation.source),
-        shell_quote(operation.destination),
-    }, " ")
-end
-
-local function build_symlink_command(operation)
-    return table.concat({
-        "ln",
-        "-s",
-        "--",
-        shell_quote(operation.source),
-        shell_quote(operation.destination),
-    }, " ")
-end
-
-local function build_command(operation)
-    if operation.type == "copy" then
-        return build_copy_command(operation)
-    end
-
-    if operation.type == "symlink" then
-        return build_symlink_command(operation)
-    end
-
-    return nil
-end
-
 local function print_operation(operation)
     operation = operation or {}
 
@@ -123,13 +52,41 @@ local function print_operation(operation)
     print("[FileOperations] Destination : " .. tostring(operation.destination))
 end
 
-local function execution_error(operation, system_result)
-    if system_result and system_result.error then
+local function map_validation_error(error_message)
+    if error_message == "Opération filesystem invalide" then
+        return "Opération fichier invalide"
+    end
+
+    if error_message == "Type d'opération filesystem manquant" then
+        return "Type d'opération fichier manquant"
+    end
+
+    if error_message == "Source d'opération filesystem manquante" then
+        return "Source d'opération fichier manquante"
+    end
+
+    if error_message == "Destination d'opération filesystem manquante" then
+        return "Destination d'opération fichier manquante"
+    end
+
+    local unknown_type = tostring(error_message):match(
+        "^Type d'opération filesystem inconnu:%s*(.*)$"
+    )
+
+    if unknown_type then
+        return "Type d'opération fichier inconnu: " .. unknown_type
+    end
+
+    return error_message
+end
+
+local function execution_error(operation, filesystem_result)
+    if filesystem_result and filesystem_result.error then
         return table.concat({
             "Échec de l'opération fichier",
             tostring(operation.type),
             ":",
-            tostring(system_result.error),
+            tostring(filesystem_result.error),
         }, " ")
     end
 
@@ -138,23 +95,19 @@ end
 
 function FileOperations.prepare(operation, options)
     local mode = resolve_mode(options)
-    local valid, validation_error = validate_operation(operation)
+    local filesystem_result = FilesystemExecutor.prepare(operation)
 
-    if not valid then
-        return create_invalid_result(operation, mode, validation_error)
+    if not filesystem_result.ok then
+        return create_invalid_result(
+            operation,
+            mode,
+            map_validation_error(filesystem_result.error)
+        )
     end
 
     local result = create_result(operation, mode)
 
-    result.command = build_command(operation)
-
-    if not result.command then
-        return create_invalid_result(
-            operation,
-            mode,
-            "Impossible de construire la commande de l'opération fichier"
-        )
-    end
+    result.command = filesystem_result.command
 
     return result
 end
@@ -195,15 +148,19 @@ function FileOperations.execute(result)
     print_operation(result.operation)
     print("[FileOperations] Commande    : " .. tostring(result.command))
 
-    local system_result = SystemExecutor.execute(result.command)
+    local filesystem_result = FilesystemExecutor.execute(result.operation)
 
-    result.system_result = system_result
-    result.executed = system_result.executed == true
+    result.command = filesystem_result.command or result.command
+    result.system_result = filesystem_result
+    result.executed = filesystem_result.executed == true
     result.simulated = false
 
-    if not system_result.ok then
+    if not filesystem_result.ok then
         result.ok = false
-        result.error = execution_error(result.operation, system_result)
+        result.error = execution_error(
+            result.operation,
+            filesystem_result
+        )
 
         return result
     end
