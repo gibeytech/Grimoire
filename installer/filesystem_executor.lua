@@ -18,6 +18,10 @@ local function value_is_present(value)
     return value ~= nil and tostring(value) ~= ""
 end
 
+local function resolve_overwrite(operation)
+    return operation.overwrite == true
+end
+
 local function create_invalid_result(operation, error_message)
     return {
         ok = false,
@@ -29,6 +33,7 @@ local function create_invalid_result(operation, error_message)
         system_result = nil,
         parent_directory = nil,
         parent_result = nil,
+        overwrite = false,
         error = error_message,
     }
 end
@@ -53,6 +58,18 @@ local function validate_destination(operation)
     return true, nil
 end
 
+local function validate_overwrite(operation)
+    if operation.overwrite == nil then
+        return true, nil
+    end
+
+    if type(operation.overwrite) ~= "boolean" then
+        return false, "La politique overwrite doit être un booléen"
+    end
+
+    return true, nil
+end
+
 local function validate_operation(operation)
     if type(operation) ~= "table" then
         return false, "Opération filesystem invalide"
@@ -65,6 +82,14 @@ local function validate_operation(operation)
     if not SUPPORTED_OPERATIONS[operation.type] then
         return false, "Type d'opération filesystem inconnu: "
             .. tostring(operation.type)
+    end
+
+    local overwrite_valid, overwrite_error = validate_overwrite(
+        operation
+    )
+
+    if not overwrite_valid then
+        return false, overwrite_error
     end
 
     if operation.type == "copy" or operation.type == "symlink" then
@@ -109,24 +134,79 @@ local function operation_requires_parent(operation)
         or operation.type == "symlink"
 end
 
-local function build_copy_command(operation)
+local function build_destination_guard(destination)
+    local quoted_destination = shell_quote(destination)
+
     return table.concat({
+        "if [ -e",
+        quoted_destination,
+        "] || [ -L",
+        quoted_destination,
+        "]; then",
+        "printf '%s\\n' 'Destination filesystem existante' >&2;",
+        "exit 73;",
+        "fi;",
+    }, " ")
+end
+
+local function build_copy_command(operation)
+    local copy_command
+
+    if resolve_overwrite(operation) then
+        copy_command = table.concat({
+            "cp",
+            "-R",
+            "-f",
+            "--",
+            shell_quote(operation.source),
+            shell_quote(operation.destination),
+        }, " ")
+
+        return copy_command
+    end
+
+    copy_command = table.concat({
         "cp",
         "-R",
         "--",
         shell_quote(operation.source),
         shell_quote(operation.destination),
     }, " ")
+
+    return build_destination_guard(operation.destination)
+        .. " "
+        .. copy_command
 end
 
 local function build_symlink_command(operation)
-    return table.concat({
+    local symlink_command
+
+    if resolve_overwrite(operation) then
+        symlink_command = table.concat({
+            "ln",
+            "-s",
+            "-f",
+            "-n",
+            "-T",
+            "--",
+            shell_quote(operation.source),
+            shell_quote(operation.destination),
+        }, " ")
+
+        return symlink_command
+    end
+
+    symlink_command = table.concat({
         "ln",
         "-s",
         "--",
         shell_quote(operation.source),
         shell_quote(operation.destination),
     }, " ")
+
+    return build_destination_guard(operation.destination)
+        .. " "
+        .. symlink_command
 end
 
 local function build_mkdir_command(operation)
@@ -171,6 +251,7 @@ local function create_execution_result(
         system_result = system_result,
         parent_directory = parent_directory,
         parent_result = parent_result,
+        overwrite = resolve_overwrite(operation),
         error = system_result.error,
     }
 end
@@ -191,6 +272,7 @@ local function create_parent_failure_result(
         system_result = parent_result.system_result,
         parent_directory = parent_directory,
         parent_result = parent_result,
+        overwrite = resolve_overwrite(operation),
         error = "Impossible de préparer le répertoire parent: "
             .. tostring(parent_result.error),
     }
@@ -230,6 +312,7 @@ function FilesystemExecutor.prepare(operation)
         system_result = nil,
         parent_directory = parent_directory,
         parent_result = nil,
+        overwrite = resolve_overwrite(operation),
         error = nil,
     }
 end
@@ -271,19 +354,25 @@ function FilesystemExecutor.execute(operation)
     )
 end
 
-function FilesystemExecutor.copy(source, destination)
+function FilesystemExecutor.copy(source, destination, options)
+    options = options or {}
+
     return FilesystemExecutor.execute({
         type = "copy",
         source = source,
         destination = destination,
+        overwrite = options.overwrite,
     })
 end
 
-function FilesystemExecutor.symlink(source, destination)
+function FilesystemExecutor.symlink(source, destination, options)
+    options = options or {}
+
     return FilesystemExecutor.execute({
         type = "symlink",
         source = source,
         destination = destination,
+        overwrite = options.overwrite,
     })
 end
 

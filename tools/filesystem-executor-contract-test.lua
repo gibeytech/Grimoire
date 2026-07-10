@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local FilesystemExecutor = require("installer.filesystem_executor")
 
-print("== FilesystemExecutor RC2-C3 Contract Test ==")
+print("== FilesystemExecutor RC2-C5 Contract Test ==")
 
 ----------------------------------------------------------------------
 -- Préparation copy
@@ -19,14 +19,36 @@ local copy_result = FilesystemExecutor.prepare(copy_operation)
 assert(copy_result.ok == true)
 assert(copy_result.operation == copy_operation)
 assert(copy_result.executed == false)
+assert(copy_result.overwrite == false)
 assert(type(copy_result.command) == "string")
 assert(copy_result.command ~= "")
-assert(copy_result.command:match("^cp %-R %-%- ") ~= nil)
+assert(
+    copy_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    copy_result.command:find(
+        "cp -R --",
+        1,
+        true
+    ) ~= nil
+)
 assert(copy_result.command:find("'source file.txt'", 1, true) ~= nil)
-assert(copy_result.command:find("'destination file.txt'", 1, true) ~= nil)
+assert(
+    copy_result.command:find(
+        "'destination file.txt'",
+        1,
+        true
+    ) ~= nil
+)
 assert(copy_result.exit_code == nil)
 assert(copy_result.reason == nil)
 assert(copy_result.system_result == nil)
+assert(copy_result.parent_directory == ".")
+assert(copy_result.parent_result == nil)
 assert(copy_result.error == nil)
 
 ----------------------------------------------------------------------
@@ -44,14 +66,42 @@ local symlink_result = FilesystemExecutor.prepare(symlink_operation)
 assert(symlink_result.ok == true)
 assert(symlink_result.operation == symlink_operation)
 assert(symlink_result.executed == false)
+assert(symlink_result.overwrite == false)
 assert(type(symlink_result.command) == "string")
 assert(symlink_result.command ~= "")
-assert(symlink_result.command:match("^ln %-s %-%- ") ~= nil)
-assert(symlink_result.command:find("'source file.txt'", 1, true) ~= nil)
-assert(symlink_result.command:find("'linked file.txt'", 1, true) ~= nil)
+assert(
+    symlink_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "ln -s --",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "'source file.txt'",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "'linked file.txt'",
+        1,
+        true
+    ) ~= nil
+)
 assert(symlink_result.exit_code == nil)
 assert(symlink_result.reason == nil)
 assert(symlink_result.system_result == nil)
+assert(symlink_result.parent_directory == ".")
+assert(symlink_result.parent_result == nil)
 assert(symlink_result.error == nil)
 
 ----------------------------------------------------------------------
@@ -68,6 +118,7 @@ local mkdir_result = FilesystemExecutor.prepare(mkdir_operation)
 assert(mkdir_result.ok == true)
 assert(mkdir_result.operation == mkdir_operation)
 assert(mkdir_result.executed == false)
+assert(mkdir_result.overwrite == false)
 assert(type(mkdir_result.command) == "string")
 assert(mkdir_result.command ~= "")
 assert(mkdir_result.command:match("^mkdir %-p %-%- ") ~= nil)
@@ -81,6 +132,8 @@ assert(
 assert(mkdir_result.exit_code == nil)
 assert(mkdir_result.reason == nil)
 assert(mkdir_result.system_result == nil)
+assert(mkdir_result.parent_directory == nil)
+assert(mkdir_result.parent_result == nil)
 assert(mkdir_result.error == nil)
 
 ----------------------------------------------------------------------
@@ -136,6 +189,9 @@ assert(invalid_result.executed == false)
 assert(invalid_result.exit_code == nil)
 assert(invalid_result.reason == nil)
 assert(invalid_result.system_result == nil)
+assert(invalid_result.parent_directory == nil)
+assert(invalid_result.parent_result == nil)
+assert(invalid_result.overwrite == false)
 assert(invalid_result.error == "Opération filesystem invalide")
 
 ----------------------------------------------------------------------
@@ -257,5 +313,25 @@ assert(
         == "Destination d'opération filesystem manquante"
 )
 
+----------------------------------------------------------------------
+-- Overwrite invalide
+----------------------------------------------------------------------
+
+local invalid_overwrite_result = FilesystemExecutor.prepare({
+    type = "copy",
+    source = "source.txt",
+    destination = "destination.txt",
+    overwrite = "true",
+})
+
+assert(invalid_overwrite_result.ok == false)
+assert(invalid_overwrite_result.command == nil)
+assert(invalid_overwrite_result.executed == false)
+assert(invalid_overwrite_result.overwrite == false)
+assert(
+    invalid_overwrite_result.error
+        == "La politique overwrite doit être un booléen"
+)
+
 print("")
-print("RC2-C3 OK : FilesystemExecutor prépare copy, symlink et mkdir.")
+print("RC2-C5 OK : FilesystemExecutor respecte le contrat filesystem.")

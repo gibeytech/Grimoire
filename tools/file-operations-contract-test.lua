@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local FileOperations = require("installer.file_operations")
 
-print("== FileOperations RC2-C1 Contract Test ==")
+print("== FileOperations RC2-C5 Contract Test ==")
 
 local operation = {
     type = "copy",
@@ -26,6 +26,20 @@ assert(prepared_result.simulated == false)
 assert(prepared_result.executed == false)
 assert(type(prepared_result.command) == "string")
 assert(prepared_result.command ~= "")
+assert(
+    prepared_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    prepared_result.command:find(
+        "cp -R --",
+        1,
+        true
+    ) ~= nil
+)
 assert(prepared_result.system_result == nil)
 assert(prepared_result.error == nil)
 
@@ -68,15 +82,76 @@ assert(apply_safe_result.system_result == nil)
 assert(apply_safe_result.error == nil)
 
 ----------------------------------------------------------------------
--- Construction commande copy
+-- Construction commande copy sans overwrite
 ----------------------------------------------------------------------
 
-assert(dry_run_result.command:match("^cp %-R %-%- ") ~= nil)
+assert(
+    dry_run_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    dry_run_result.command:find(
+        "cp -R --",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    dry_run_result.command:find(
+        "cp -R -f --",
+        1,
+        true
+    ) == nil
+)
 assert(dry_run_result.command:find("'source.txt'", 1, true) ~= nil)
-assert(dry_run_result.command:find("'destination.txt'", 1, true) ~= nil)
+assert(
+    dry_run_result.command:find(
+        "'destination.txt'",
+        1,
+        true
+    ) ~= nil
+)
 
 ----------------------------------------------------------------------
--- Construction commande symlink
+-- Construction commande copy avec overwrite
+----------------------------------------------------------------------
+
+local overwrite_copy_result = FileOperations.run({
+    type = "copy",
+    source = "source.txt",
+    destination = "destination.txt",
+    overwrite = true,
+}, {
+    dry_run = true,
+})
+
+assert(overwrite_copy_result.ok == true)
+assert(overwrite_copy_result.mode == "dry-run")
+assert(overwrite_copy_result.prepared == true)
+assert(overwrite_copy_result.simulated == true)
+assert(overwrite_copy_result.executed == false)
+assert(
+    overwrite_copy_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) == nil
+)
+assert(
+    overwrite_copy_result.command:find(
+        "cp -R -f --",
+        1,
+        true
+    ) ~= nil
+)
+assert(overwrite_copy_result.system_result == nil)
+assert(overwrite_copy_result.error == nil)
+
+----------------------------------------------------------------------
+-- Construction commande symlink sans overwrite
 ----------------------------------------------------------------------
 
 local symlink_operation = {
@@ -95,11 +170,78 @@ assert(symlink_result.prepared == true)
 assert(symlink_result.simulated == true)
 assert(symlink_result.executed == false)
 assert(type(symlink_result.command) == "string")
-assert(symlink_result.command:match("^ln %-s %-%- ") ~= nil)
-assert(symlink_result.command:find("'source.txt'", 1, true) ~= nil)
-assert(symlink_result.command:find("'link.txt'", 1, true) ~= nil)
+assert(
+    symlink_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "ln -s --",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "ln -s -f -n -T --",
+        1,
+        true
+    ) == nil
+)
+assert(
+    symlink_result.command:find(
+        "'source.txt'",
+        1,
+        true
+    ) ~= nil
+)
+assert(
+    symlink_result.command:find(
+        "'link.txt'",
+        1,
+        true
+    ) ~= nil
+)
 assert(symlink_result.system_result == nil)
 assert(symlink_result.error == nil)
+
+----------------------------------------------------------------------
+-- Construction commande symlink avec overwrite
+----------------------------------------------------------------------
+
+local overwrite_symlink_result = FileOperations.run({
+    type = "symlink",
+    source = "source.txt",
+    destination = "link.txt",
+    overwrite = true,
+}, {
+    dry_run = true,
+})
+
+assert(overwrite_symlink_result.ok == true)
+assert(overwrite_symlink_result.mode == "dry-run")
+assert(overwrite_symlink_result.prepared == true)
+assert(overwrite_symlink_result.simulated == true)
+assert(overwrite_symlink_result.executed == false)
+assert(
+    overwrite_symlink_result.command:find(
+        "Destination filesystem existante",
+        1,
+        true
+    ) == nil
+)
+assert(
+    overwrite_symlink_result.command:find(
+        "ln -s -f -n -T --",
+        1,
+        true
+    ) ~= nil
+)
+assert(overwrite_symlink_result.system_result == nil)
+assert(overwrite_symlink_result.error == nil)
 
 ----------------------------------------------------------------------
 -- Opération invalide
@@ -137,7 +279,10 @@ assert(unknown_type_result.simulated == false)
 assert(unknown_type_result.executed == false)
 assert(unknown_type_result.command == nil)
 assert(unknown_type_result.system_result == nil)
-assert(unknown_type_result.error == "Type d'opération fichier inconnu: delete")
+assert(
+    unknown_type_result.error
+        == "Type d'opération fichier inconnu: delete"
+)
 
 ----------------------------------------------------------------------
 -- Source manquante
@@ -157,7 +302,10 @@ assert(missing_source_result.simulated == false)
 assert(missing_source_result.executed == false)
 assert(missing_source_result.command == nil)
 assert(missing_source_result.system_result == nil)
-assert(missing_source_result.error == "Source d'opération fichier manquante")
+assert(
+    missing_source_result.error
+        == "Source d'opération fichier manquante"
+)
 
 ----------------------------------------------------------------------
 -- Destination manquante
@@ -177,7 +325,35 @@ assert(missing_destination_result.simulated == false)
 assert(missing_destination_result.executed == false)
 assert(missing_destination_result.command == nil)
 assert(missing_destination_result.system_result == nil)
-assert(missing_destination_result.error == "Destination d'opération fichier manquante")
+assert(
+    missing_destination_result.error
+        == "Destination d'opération fichier manquante"
+)
+
+----------------------------------------------------------------------
+-- Overwrite invalide
+----------------------------------------------------------------------
+
+local invalid_overwrite_result = FileOperations.run({
+    type = "copy",
+    source = "source.txt",
+    destination = "destination.txt",
+    overwrite = "true",
+}, {
+    dry_run = true,
+})
+
+assert(invalid_overwrite_result.ok == false)
+assert(invalid_overwrite_result.mode == "dry-run")
+assert(invalid_overwrite_result.prepared == false)
+assert(invalid_overwrite_result.simulated == false)
+assert(invalid_overwrite_result.executed == false)
+assert(invalid_overwrite_result.command == nil)
+assert(invalid_overwrite_result.system_result == nil)
+assert(
+    invalid_overwrite_result.error
+        == "La politique overwrite doit être un booléen"
+)
 
 print("")
-print("RC2-C1 OK : FileOperations conserve son contrat et prépare copy/symlink.")
+print("RC2-C5 OK : FileOperations expose la politique overwrite.")
