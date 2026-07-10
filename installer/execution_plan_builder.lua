@@ -1,5 +1,6 @@
 local ExecutionPlan = require("installer.model.execution_plan")
 local PackageManager = require("installer.managers.package_manager")
+local PathResolver = require("installer.path_resolver")
 
 local ExecutionPlanBuilder = {}
 
@@ -10,12 +11,94 @@ local function execution_mode(options)
         return "dry-run"
     end
 
+    if options.apply_real == true then
+        return "apply-real"
+    end
+
     return "apply-safe"
 end
 
 local function add_action(actions, action)
     action.executed = false
     table.insert(actions, action)
+end
+
+local function value_is_present(value)
+    return value ~= nil and tostring(value) ~= ""
+end
+
+local function path_is_absolute(path)
+    return value_is_present(path)
+        and tostring(path):sub(1, 1) == "/"
+end
+
+local function path_uses_home(path)
+    if not value_is_present(path) then
+        return false
+    end
+
+    local string_path = tostring(path)
+
+    return string_path == "~"
+        or string_path:sub(1, 2) == "~/"
+        or string_path == "$HOME"
+        or string_path:sub(1, 6) == "$HOME/"
+        or string_path == "${HOME}"
+        or string_path:sub(1, 8) == "${HOME}/"
+end
+
+local function join_paths(base, relative)
+    local normalized_base = tostring(base)
+    local normalized_relative = tostring(relative)
+
+    while #normalized_base > 1
+        and normalized_base:sub(-1) == "/"
+    do
+        normalized_base = normalized_base:sub(1, -2)
+    end
+
+    while normalized_relative:sub(1, 1) == "/" do
+        normalized_relative = normalized_relative:sub(2)
+    end
+
+    if normalized_relative == "" then
+        return normalized_base
+    end
+
+    return normalized_base .. "/" .. normalized_relative
+end
+
+local function resolve_path(path, options)
+    local result = PathResolver.resolve(path, {
+        home = options and options.home,
+    })
+
+    if not result.ok then
+        error(
+            "Impossible de résoudre le chemin "
+                .. tostring(path)
+                .. ": "
+                .. tostring(result.error)
+        )
+    end
+
+    return result.path
+end
+
+local function resolve_profile_source(profile, source, options)
+    if not value_is_present(source) then
+        return source
+    end
+
+    if path_is_absolute(source) or path_uses_home(source) then
+        return resolve_path(source, options)
+    end
+
+    if profile and value_is_present(profile.root) then
+        return join_paths(profile.root, source)
+    end
+
+    return source
 end
 
 local function add_package_actions(actions, plan)
@@ -71,7 +154,8 @@ local function add_shell_actions(actions, plan)
     end
 end
 
-local function add_asset_actions(actions, plan)
+local function add_asset_actions(actions, plan, options)
+    local profile = plan:getProfile()
     local assets = plan:getAssets()
 
     for name, config in pairs(assets or {}) do
@@ -81,14 +165,22 @@ local function add_asset_actions(actions, plan)
             name = name,
             operation = {
                 type = "copy",
-                source = config.source,
-                destination = config.destination,
+                source = resolve_profile_source(
+                    profile,
+                    config.source,
+                    options
+                ),
+                destination = resolve_path(
+                    config.destination,
+                    options
+                ),
+                overwrite = config.overwrite,
             },
         })
     end
 end
 
-local function add_deploy_actions(actions, plan)
+local function add_deploy_actions(actions, plan, options)
     local profile = plan:getProfile()
     local dotfiles = plan:getDotfiles()
 
@@ -99,29 +191,38 @@ local function add_deploy_actions(actions, plan)
             name = "dotfiles",
             operation = {
                 type = "symlink",
-                source = profile.root .. "/" .. dotfiles.source,
-                destination = "~/.config",
+                source = resolve_profile_source(
+                    profile,
+                    dotfiles.source,
+                    options
+                ),
+                destination = resolve_path(
+                    dotfiles.destination or "~/.config",
+                    options
+                ),
+                overwrite = dotfiles.overwrite,
             },
         })
     end
 end
 
 function ExecutionPlanBuilder.build(plan, options)
+    options = options or {}
+
     local actions = {}
 
     add_package_actions(actions, plan)
     add_service_actions(actions, plan)
     add_shell_actions(actions, plan)
-    add_asset_actions(actions, plan)
-    add_deploy_actions(actions, plan)
+    add_asset_actions(actions, plan, options)
+    add_deploy_actions(actions, plan, options)
 
-       return ExecutionPlan:new({
+    return ExecutionPlan:new({
         profile = plan:getProfile(),
         mode = execution_mode(options),
         actions = actions,
         installation_plan = plan,
     })
-
-   end
+end
 
 return ExecutionPlanBuilder
