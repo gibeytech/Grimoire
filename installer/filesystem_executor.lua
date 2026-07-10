@@ -27,6 +27,8 @@ local function create_invalid_result(operation, error_message)
         exit_code = nil,
         reason = nil,
         system_result = nil,
+        parent_directory = nil,
+        parent_result = nil,
         error = error_message,
     }
 end
@@ -77,6 +79,36 @@ local function validate_operation(operation)
         .. tostring(operation.type)
 end
 
+local function normalize_destination(destination)
+    local normalized = tostring(destination)
+
+    while #normalized > 1 and normalized:sub(-1) == "/" do
+        normalized = normalized:sub(1, -2)
+    end
+
+    return normalized
+end
+
+local function resolve_parent_directory(destination)
+    local normalized = normalize_destination(destination)
+    local parent = normalized:match("^(.*)/[^/]+$")
+
+    if parent == nil then
+        return "."
+    end
+
+    if parent == "" then
+        return "/"
+    end
+
+    return parent
+end
+
+local function operation_requires_parent(operation)
+    return operation.type == "copy"
+        or operation.type == "symlink"
+end
+
 local function build_copy_command(operation)
     return table.concat({
         "cp",
@@ -122,6 +154,48 @@ local function build_command(operation)
     return nil
 end
 
+local function create_execution_result(
+    operation,
+    command,
+    system_result,
+    parent_directory,
+    parent_result
+)
+    return {
+        ok = system_result.ok,
+        operation = operation,
+        command = command,
+        executed = system_result.executed,
+        exit_code = system_result.exit_code,
+        reason = system_result.reason,
+        system_result = system_result,
+        parent_directory = parent_directory,
+        parent_result = parent_result,
+        error = system_result.error,
+    }
+end
+
+local function create_parent_failure_result(
+    operation,
+    command,
+    parent_directory,
+    parent_result
+)
+    return {
+        ok = false,
+        operation = operation,
+        command = command,
+        executed = parent_result.executed == true,
+        exit_code = parent_result.exit_code,
+        reason = parent_result.reason,
+        system_result = parent_result.system_result,
+        parent_directory = parent_directory,
+        parent_result = parent_result,
+        error = "Impossible de préparer le répertoire parent: "
+            .. tostring(parent_result.error),
+    }
+end
+
 function FilesystemExecutor.prepare(operation)
     local valid, validation_error = validate_operation(operation)
 
@@ -138,6 +212,14 @@ function FilesystemExecutor.prepare(operation)
         )
     end
 
+    local parent_directory = nil
+
+    if operation_requires_parent(operation) then
+        parent_directory = resolve_parent_directory(
+            operation.destination
+        )
+    end
+
     return {
         ok = true,
         operation = operation,
@@ -146,6 +228,8 @@ function FilesystemExecutor.prepare(operation)
         exit_code = nil,
         reason = nil,
         system_result = nil,
+        parent_directory = parent_directory,
+        parent_result = nil,
         error = nil,
     }
 end
@@ -157,18 +241,34 @@ function FilesystemExecutor.execute(operation)
         return prepared_result
     end
 
-    local system_result = SystemExecutor.execute(prepared_result.command)
+    local parent_result = nil
 
-    return {
-        ok = system_result.ok,
-        operation = operation,
-        command = prepared_result.command,
-        executed = system_result.executed,
-        exit_code = system_result.exit_code,
-        reason = system_result.reason,
-        system_result = system_result,
-        error = system_result.error,
-    }
+    if prepared_result.parent_directory then
+        parent_result = FilesystemExecutor.mkdir(
+            prepared_result.parent_directory
+        )
+
+        if not parent_result.ok then
+            return create_parent_failure_result(
+                operation,
+                prepared_result.command,
+                prepared_result.parent_directory,
+                parent_result
+            )
+        end
+    end
+
+    local system_result = SystemExecutor.execute(
+        prepared_result.command
+    )
+
+    return create_execution_result(
+        operation,
+        prepared_result.command,
+        system_result,
+        prepared_result.parent_directory,
+        parent_result
+    )
 end
 
 function FilesystemExecutor.copy(source, destination)
