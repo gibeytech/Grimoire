@@ -5,6 +5,7 @@ local FilesystemExecutor = {}
 local SUPPORTED_OPERATIONS = {
     copy = true,
     symlink = true,
+    mkdir = true,
 }
 
 local function shell_quote(value)
@@ -30,6 +31,26 @@ local function create_invalid_result(operation, error_message)
     }
 end
 
+local function validate_source_and_destination(operation)
+    if not value_is_present(operation.source) then
+        return false, "Source d'opération filesystem manquante"
+    end
+
+    if not value_is_present(operation.destination) then
+        return false, "Destination d'opération filesystem manquante"
+    end
+
+    return true, nil
+end
+
+local function validate_destination(operation)
+    if not value_is_present(operation.destination) then
+        return false, "Destination d'opération filesystem manquante"
+    end
+
+    return true, nil
+end
+
 local function validate_operation(operation)
     if type(operation) ~= "table" then
         return false, "Opération filesystem invalide"
@@ -44,15 +65,16 @@ local function validate_operation(operation)
             .. tostring(operation.type)
     end
 
-    if not value_is_present(operation.source) then
-        return false, "Source d'opération filesystem manquante"
+    if operation.type == "copy" or operation.type == "symlink" then
+        return validate_source_and_destination(operation)
     end
 
-    if not value_is_present(operation.destination) then
-        return false, "Destination d'opération filesystem manquante"
+    if operation.type == "mkdir" then
+        return validate_destination(operation)
     end
 
-    return true, nil
+    return false, "Contrat d'opération filesystem introuvable: "
+        .. tostring(operation.type)
 end
 
 local function build_copy_command(operation)
@@ -75,6 +97,15 @@ local function build_symlink_command(operation)
     }, " ")
 end
 
+local function build_mkdir_command(operation)
+    return table.concat({
+        "mkdir",
+        "-p",
+        "--",
+        shell_quote(operation.destination),
+    }, " ")
+end
+
 local function build_command(operation)
     if operation.type == "copy" then
         return build_copy_command(operation)
@@ -82,6 +113,10 @@ local function build_command(operation)
 
     if operation.type == "symlink" then
         return build_symlink_command(operation)
+    end
+
+    if operation.type == "mkdir" then
+        return build_mkdir_command(operation)
     end
 
     return nil
@@ -148,6 +183,13 @@ function FilesystemExecutor.symlink(source, destination)
     return FilesystemExecutor.execute({
         type = "symlink",
         source = source,
+        destination = destination,
+    })
+end
+
+function FilesystemExecutor.mkdir(destination)
+    return FilesystemExecutor.execute({
+        type = "mkdir",
         destination = destination,
     })
 end

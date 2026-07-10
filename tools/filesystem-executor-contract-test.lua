@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local FilesystemExecutor = require("installer.filesystem_executor")
 
-print("== FilesystemExecutor RC2-C2 Contract Test ==")
+print("== FilesystemExecutor RC2-C3 Contract Test ==")
 
 ----------------------------------------------------------------------
 -- Préparation copy
@@ -55,6 +55,35 @@ assert(symlink_result.system_result == nil)
 assert(symlink_result.error == nil)
 
 ----------------------------------------------------------------------
+-- Préparation mkdir
+----------------------------------------------------------------------
+
+local mkdir_operation = {
+    type = "mkdir",
+    destination = "parent directory/child directory",
+}
+
+local mkdir_result = FilesystemExecutor.prepare(mkdir_operation)
+
+assert(mkdir_result.ok == true)
+assert(mkdir_result.operation == mkdir_operation)
+assert(mkdir_result.executed == false)
+assert(type(mkdir_result.command) == "string")
+assert(mkdir_result.command ~= "")
+assert(mkdir_result.command:match("^mkdir %-p %-%- ") ~= nil)
+assert(
+    mkdir_result.command:find(
+        "'parent directory/child directory'",
+        1,
+        true
+    ) ~= nil
+)
+assert(mkdir_result.exit_code == nil)
+assert(mkdir_result.reason == nil)
+assert(mkdir_result.system_result == nil)
+assert(mkdir_result.error == nil)
+
+----------------------------------------------------------------------
 -- Échappement des apostrophes
 ----------------------------------------------------------------------
 
@@ -75,6 +104,20 @@ assert(
 assert(
     quoted_result.command:find(
         "'destination d'\\''utilisateur.txt'",
+        1,
+        true
+    ) ~= nil
+)
+
+local quoted_directory_result = FilesystemExecutor.prepare({
+    type = "mkdir",
+    destination = "répertoire d'utilisateur",
+})
+
+assert(quoted_directory_result.ok == true)
+assert(
+    quoted_directory_result.command:find(
+        "'répertoire d'\\''utilisateur'",
         1,
         true
     ) ~= nil
@@ -131,38 +174,88 @@ assert(
 )
 
 ----------------------------------------------------------------------
--- Source manquante
+-- Source manquante pour copy
 ----------------------------------------------------------------------
 
-local missing_source_result = FilesystemExecutor.prepare({
+local missing_copy_source_result = FilesystemExecutor.prepare({
     type = "copy",
     destination = "destination.txt",
 })
 
-assert(missing_source_result.ok == false)
-assert(missing_source_result.command == nil)
-assert(missing_source_result.executed == false)
+assert(missing_copy_source_result.ok == false)
+assert(missing_copy_source_result.command == nil)
+assert(missing_copy_source_result.executed == false)
 assert(
-    missing_source_result.error
+    missing_copy_source_result.error
         == "Source d'opération filesystem manquante"
 )
 
 ----------------------------------------------------------------------
--- Destination manquante
+-- Source manquante pour symlink
 ----------------------------------------------------------------------
 
-local missing_destination_result = FilesystemExecutor.prepare({
+local missing_symlink_source_result = FilesystemExecutor.prepare({
+    type = "symlink",
+    destination = "destination.txt",
+})
+
+assert(missing_symlink_source_result.ok == false)
+assert(missing_symlink_source_result.command == nil)
+assert(missing_symlink_source_result.executed == false)
+assert(
+    missing_symlink_source_result.error
+        == "Source d'opération filesystem manquante"
+)
+
+----------------------------------------------------------------------
+-- Destination manquante pour copy
+----------------------------------------------------------------------
+
+local missing_copy_destination_result = FilesystemExecutor.prepare({
     type = "copy",
     source = "source.txt",
 })
 
-assert(missing_destination_result.ok == false)
-assert(missing_destination_result.command == nil)
-assert(missing_destination_result.executed == false)
+assert(missing_copy_destination_result.ok == false)
+assert(missing_copy_destination_result.command == nil)
+assert(missing_copy_destination_result.executed == false)
 assert(
-    missing_destination_result.error
+    missing_copy_destination_result.error
+        == "Destination d'opération filesystem manquante"
+)
+
+----------------------------------------------------------------------
+-- Destination manquante pour symlink
+----------------------------------------------------------------------
+
+local missing_symlink_destination_result = FilesystemExecutor.prepare({
+    type = "symlink",
+    source = "source.txt",
+})
+
+assert(missing_symlink_destination_result.ok == false)
+assert(missing_symlink_destination_result.command == nil)
+assert(missing_symlink_destination_result.executed == false)
+assert(
+    missing_symlink_destination_result.error
+        == "Destination d'opération filesystem manquante"
+)
+
+----------------------------------------------------------------------
+-- Destination manquante pour mkdir
+----------------------------------------------------------------------
+
+local missing_mkdir_destination_result = FilesystemExecutor.prepare({
+    type = "mkdir",
+})
+
+assert(missing_mkdir_destination_result.ok == false)
+assert(missing_mkdir_destination_result.command == nil)
+assert(missing_mkdir_destination_result.executed == false)
+assert(
+    missing_mkdir_destination_result.error
         == "Destination d'opération filesystem manquante"
 )
 
 print("")
-print("RC2-C2 OK : FilesystemExecutor prépare copy et symlink.")
+print("RC2-C3 OK : FilesystemExecutor prépare copy, symlink et mkdir.")
