@@ -1,9 +1,101 @@
 local SystemExecutor = {}
 
+local DEFAULT_KILL_AFTER_SECONDS = 2
+local TIMEOUT_EXIT_CODES = {
+   [124] = true,
+   [137] = true,
+}
+local INTERRUPTED_EXIT_CODES = {
+   [130] = true,
+   [143] = true,
+}
+
 local function shell_quote(value)
    local string_value = tostring(value)
 
    return "'" .. string_value:gsub("'", "'\\''") .. "'"
+end
+
+local function normalize_positive_number(value, label)
+   if value == nil then
+      return nil, nil
+   end
+
+   if type(value) ~= "number"
+      or value ~= value
+      or value == math.huge
+      or value == -math.huge
+      or value <= 0
+   then
+      return nil, tostring(label) .. " invalide"
+   end
+
+   return value, nil
+end
+
+local function normalize_duration(value)
+   local formatted = string.format("%.3f", value)
+
+   formatted = formatted:gsub("0+$", "")
+   formatted = formatted:gsub("%.$", "")
+
+   return formatted .. "s"
+end
+
+local function resolve_execution_limits(options)
+   if options == nil then
+      return nil, nil, nil
+   end
+
+   if type(options) ~= "table" then
+      return nil, nil, "Options SystemExecutor invalides"
+   end
+
+   local timeout_seconds, timeout_error =
+      normalize_positive_number(
+         options.timeout_seconds,
+         "Timeout système"
+      )
+
+   if timeout_error then
+      return nil, nil, timeout_error
+   end
+
+   local kill_after_seconds = nil
+
+   if timeout_seconds ~= nil then
+      kill_after_seconds =
+         options.kill_after_seconds
+
+      if kill_after_seconds == nil then
+         kill_after_seconds =
+            DEFAULT_KILL_AFTER_SECONDS
+      end
+
+      local kill_after_error
+
+      kill_after_seconds, kill_after_error =
+         normalize_positive_number(
+            kill_after_seconds,
+            "Délai d'arrêt forcé"
+         )
+
+      if kill_after_error then
+         return nil, nil, kill_after_error
+      end
+   elseif options.kill_after_seconds ~= nil then
+      local _, kill_after_error =
+         normalize_positive_number(
+            options.kill_after_seconds,
+            "Délai d'arrêt forcé"
+         )
+
+      if kill_after_error then
+         return nil, nil, kill_after_error
+      end
+   end
+
+   return timeout_seconds, kill_after_seconds, nil
 end
 
 local function normalize_exit_code(ok, reason, code)
@@ -12,6 +104,10 @@ local function normalize_exit_code(ok, reason, code)
    end
 
    if type(ok) == "number" then
+      if ok > 255 and ok % 256 == 0 then
+         return math.floor(ok / 256)
+      end
+
       return ok
    end
 
@@ -22,9 +118,45 @@ local function normalize_exit_code(ok, reason, code)
    return 1
 end
 
-local function resolve_error(exit_code)
+local function resolve_timed_out(
+   exit_code,
+   timeout_seconds
+)
+   return timeout_seconds ~= nil
+      and TIMEOUT_EXIT_CODES[exit_code] == true
+end
+
+local function resolve_interrupted(
+   reason,
+   exit_code,
+   timed_out
+)
+   if timed_out then
+      return false
+   end
+
+   if reason == "signal" then
+      return true
+   end
+
+   return INTERRUPTED_EXIT_CODES[exit_code] == true
+end
+
+local function resolve_error(
+   exit_code,
+   timed_out,
+   interrupted
+)
    if exit_code == 0 then
       return nil
+   end
+
+   if timed_out then
+      return "Commande système interrompue par timeout"
+   end
+
+   if interrupted then
+      return "Commande système interrompue"
    end
 
    return "Commande système échouée"
@@ -238,6 +370,34 @@ local function read_capture(path)
    return content, nil
 end
 
+local function build_timeout_command(
+   command,
+   timeout_seconds,
+   kill_after_seconds
+)
+   if timeout_seconds == nil then
+      return command
+   end
+
+   return table.concat({
+      "/usr/bin/timeout",
+      "--foreground",
+      "--signal=TERM",
+      "--kill-after="
+         .. shell_quote(
+            normalize_duration(
+               kill_after_seconds
+            )
+         ),
+      shell_quote(
+         normalize_duration(timeout_seconds)
+      ),
+      "/bin/sh",
+      "-c",
+      shell_quote(command),
+   }, " ")
+end
+
 local function build_captured_command(
    command,
    stdout_path,
@@ -269,12 +429,20 @@ local function create_internal_error_result(
       reason = details.reason,
       stdout = details.stdout or "",
       stderr = details.stderr or "",
+      timed_out = details.timed_out == true,
+      interrupted = details.interrupted == true,
+      timeout_seconds = details.timeout_seconds,
+      kill_after_seconds =
+         details.kill_after_seconds,
       error = "Erreur interne SystemExecutor: "
          .. tostring(message),
    }
 end
 
-local function create_invalid_result(command)
+local function create_invalid_result(
+   command,
+   error_message
+)
    return {
       ok = false,
       command = command,
@@ -283,16 +451,31 @@ local function create_invalid_result(command)
       reason = nil,
       stdout = "",
       stderr = "",
-      error = "Commande système invalide",
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
+      error = error_message
+         or "Commande système invalide",
    }
 end
 
-function SystemExecutor.execute(command)
+function SystemExecutor.execute(command, options)
    if not command or tostring(command) == "" then
       return create_invalid_result(command)
    end
 
    command = tostring(command)
+
+   local timeout_seconds, kill_after_seconds,
+      limits_error = resolve_execution_limits(options)
+
+   if limits_error then
+      return create_invalid_result(
+         command,
+         limits_error
+      )
+   end
 
    local stdout_path, stderr_path, capture_error =
       create_capture_paths()
@@ -306,8 +489,14 @@ function SystemExecutor.execute(command)
       )
    end
 
-   local captured_command = build_captured_command(
+   local execution_command = build_timeout_command(
       command,
+      timeout_seconds,
+      kill_after_seconds
+   )
+
+   local captured_command = build_captured_command(
+      execution_command,
       stdout_path,
       stderr_path
    )
@@ -338,7 +527,12 @@ function SystemExecutor.execute(command)
 
       return create_internal_error_result(
          command,
-         message
+         message,
+         {
+            timeout_seconds = timeout_seconds,
+            kill_after_seconds =
+               kill_after_seconds,
+         }
       )
    end
 
@@ -346,6 +540,17 @@ function SystemExecutor.execute(command)
       ok,
       reason,
       code
+   )
+
+   local timed_out = resolve_timed_out(
+      exit_code,
+      timeout_seconds
+   )
+
+   local interrupted = resolve_interrupted(
+      reason,
+      exit_code,
+      timed_out
    )
 
    local stdout, stdout_error = read_capture(stdout_path)
@@ -395,6 +600,11 @@ function SystemExecutor.execute(command)
             reason = reason,
             stdout = stdout,
             stderr = stderr,
+            timed_out = timed_out,
+            interrupted = interrupted,
+            timeout_seconds = timeout_seconds,
+            kill_after_seconds =
+               kill_after_seconds,
          }
       )
    end
@@ -411,6 +621,11 @@ function SystemExecutor.execute(command)
             reason = reason,
             stdout = stdout,
             stderr = stderr,
+            timed_out = timed_out,
+            interrupted = interrupted,
+            timeout_seconds = timeout_seconds,
+            kill_after_seconds =
+               kill_after_seconds,
          }
       )
    end
@@ -423,7 +638,15 @@ function SystemExecutor.execute(command)
       reason = reason,
       stdout = stdout,
       stderr = stderr,
-      error = resolve_error(exit_code),
+      timed_out = timed_out,
+      interrupted = interrupted,
+      timeout_seconds = timeout_seconds,
+      kill_after_seconds = kill_after_seconds,
+      error = resolve_error(
+         exit_code,
+         timed_out,
+         interrupted
+      ),
    }
 end
 

@@ -36,6 +36,10 @@ local function create_invalid_result(
       executed = false,
       exit_code = nil,
       reason = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       system_result = nil,
       parent_directory = nil,
       parent_result = nil,
@@ -268,6 +272,10 @@ local function create_execution_result(
       executed = system_result.executed,
       exit_code = system_result.exit_code,
       reason = system_result.reason,
+      timed_out = system_result.timed_out == true,
+      interrupted = system_result.interrupted == true,
+      timeout_seconds = system_result.timeout_seconds,
+      kill_after_seconds = system_result.kill_after_seconds,
       system_result = system_result,
       parent_directory = parent_directory,
       parent_result = parent_result,
@@ -297,6 +305,10 @@ local function create_parent_failure_result(
       executed = parent_result.executed == true,
       exit_code = parent_result.exit_code,
       reason = parent_result.reason,
+      timed_out = parent_result.timed_out == true,
+      interrupted = parent_result.interrupted == true,
+      timeout_seconds = parent_result.timeout_seconds,
+      kill_after_seconds = parent_result.kill_after_seconds,
       system_result = parent_result.system_result,
       parent_directory = parent_directory,
       parent_result = parent_result,
@@ -344,6 +356,10 @@ function FilesystemExecutor.prepare(operation)
       executed = false,
       exit_code = nil,
       reason = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       system_result = nil,
       parent_directory = parent_directory,
       parent_result = nil,
@@ -355,7 +371,7 @@ function FilesystemExecutor.prepare(operation)
    }
 end
 
-function FilesystemExecutor.execute(operation)
+function FilesystemExecutor.execute(operation, options)
    local prepared_result =
       FilesystemExecutor.prepare(operation)
 
@@ -367,7 +383,8 @@ function FilesystemExecutor.execute(operation)
 
    if prepared_result.parent_directory then
       parent_result = FilesystemExecutor.mkdir(
-         prepared_result.parent_directory
+         prepared_result.parent_directory,
+         options
       )
 
       if not parent_result.ok then
@@ -381,7 +398,8 @@ function FilesystemExecutor.execute(operation)
    end
 
    local system_result = SystemExecutor.execute(
-      prepared_result.command
+      prepared_result.command,
+      options
    )
 
    return create_execution_result(
@@ -400,12 +418,15 @@ function FilesystemExecutor.copy(
 )
    options = options or {}
 
-   return FilesystemExecutor.execute({
-      type = "copy",
-      source = source,
-      destination = destination,
-      overwrite = options.overwrite,
-   })
+   return FilesystemExecutor.execute(
+      {
+         type = "copy",
+         source = source,
+         destination = destination,
+         overwrite = options.overwrite,
+      },
+      options
+   )
 end
 
 function FilesystemExecutor.symlink(
@@ -415,19 +436,25 @@ function FilesystemExecutor.symlink(
 )
    options = options or {}
 
-   return FilesystemExecutor.execute({
-      type = "symlink",
-      source = source,
-      destination = destination,
-      overwrite = options.overwrite,
-   })
+   return FilesystemExecutor.execute(
+      {
+         type = "symlink",
+         source = source,
+         destination = destination,
+         overwrite = options.overwrite,
+      },
+      options
+   )
 end
 
-function FilesystemExecutor.mkdir(destination)
-   return FilesystemExecutor.execute({
-      type = "mkdir",
-      destination = destination,
-   })
+function FilesystemExecutor.mkdir(destination, options)
+   return FilesystemExecutor.execute(
+      {
+         type = "mkdir",
+         destination = destination,
+      },
+      options
+   )
 end
 
 return FilesystemExecutor

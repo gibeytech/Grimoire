@@ -62,6 +62,32 @@ local function resolve_failure_status(rollback)
    return "failed"
 end
 
+local function resolve_failure_kind(journal)
+   local entry = journal and journal[#journal]
+
+   if entry and entry.timed_out == true then
+      return "timeout"
+   end
+
+   if entry and entry.interrupted == true then
+      return "interrupted"
+   end
+
+   return "error"
+end
+
+local function resolve_control_metadata(journal)
+   local entry = journal and journal[#journal] or {}
+
+   return {
+      timed_out = entry.timed_out == true,
+      interrupted = entry.interrupted == true,
+      timeout_seconds = entry.timeout_seconds,
+      kill_after_seconds =
+         entry.kill_after_seconds,
+   }
+end
+
 local function failure_result(
    mode,
    failed_result,
@@ -70,6 +96,7 @@ local function failure_result(
    transaction
 )
    local rollback = transaction:rollback()
+   local control = resolve_control_metadata(journal)
 
    return {
       ok = false,
@@ -77,6 +104,12 @@ local function failure_result(
       mode = mode,
       transaction_status =
          resolve_failure_status(rollback),
+      failure_kind = resolve_failure_kind(journal),
+      timed_out = control.timed_out,
+      interrupted = control.interrupted,
+      timeout_seconds = control.timeout_seconds,
+      kill_after_seconds =
+         control.kill_after_seconds,
       failed_at = failed_result.manager,
       results = results,
       journal = journal,
@@ -142,6 +175,11 @@ function Executor.run(execution_plan, options)
          dry_run = dry_run,
          mode = mode,
          transaction_status = "invalid",
+         failure_kind = "invalid",
+         timed_out = false,
+         interrupted = false,
+         timeout_seconds = nil,
+         kill_after_seconds = nil,
          failed_at = "executor",
          results = results,
          journal = journal,
@@ -213,6 +251,11 @@ function Executor.run(execution_plan, options)
       dry_run = dry_run,
       mode = mode,
       transaction_status = "committed",
+      failure_kind = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       results = results,
       journal = journal,
       rollback =

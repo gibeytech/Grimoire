@@ -32,6 +32,10 @@ local function create_result(
       executed = false,
       command = nil,
       system_result = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       compensation = compensation,
       error = nil,
    }
@@ -52,6 +56,10 @@ local function create_invalid_result(
       executed = false,
       command = nil,
       system_result = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       compensation = compensation,
       error = error_message,
    }
@@ -168,6 +176,8 @@ function FileOperations.simulate(result)
    result.simulated = true
    result.executed = false
    result.system_result = nil
+   result.timed_out = false
+   result.interrupted = false
 
    if result.mode == "dry-run" then
       print(
@@ -196,7 +206,7 @@ function FileOperations.simulate(result)
    return result
 end
 
-function FileOperations.execute(result)
+function FileOperations.execute(result, options)
    if not result or not result.ok then
       return result
    end
@@ -218,7 +228,10 @@ function FileOperations.execute(result)
    )
 
    local filesystem_result =
-      FilesystemExecutor.execute(result.operation)
+      FilesystemExecutor.execute(
+         result.operation,
+         options
+      )
 
    result.command =
       filesystem_result.command or result.command
@@ -230,6 +243,18 @@ function FileOperations.execute(result)
 
    result.executed =
       filesystem_result.executed == true
+
+   result.timed_out =
+      filesystem_result.timed_out == true
+
+   result.interrupted =
+      filesystem_result.interrupted == true
+
+   result.timeout_seconds =
+      filesystem_result.timeout_seconds
+
+   result.kill_after_seconds =
+      filesystem_result.kill_after_seconds
 
    result.simulated = false
 
@@ -268,7 +293,10 @@ function FileOperations.run(operation, options)
    end
 
    if result.mode == "apply-real" then
-      return FileOperations.execute(result)
+      return FileOperations.execute(
+         result,
+         options
+      )
    end
 
    return {
@@ -280,6 +308,10 @@ function FileOperations.run(operation, options)
       executed = false,
       command = result.command,
       system_result = nil,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
       compensation = result.compensation,
       error = "Mode FileOperations inconnu: "
          .. tostring(result.mode),

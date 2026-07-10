@@ -16,7 +16,9 @@ local function resolve_mode(options)
     return "apply-safe"
 end
 
-local function create_result(command, mode)
+local function create_result(command, mode, options)
+    options = options or {}
+
     return {
         ok = true,
         mode = mode,
@@ -25,11 +27,18 @@ local function create_result(command, mode)
         simulated = false,
         executed = false,
         exit_code = nil,
+        reason = nil,
+        timed_out = false,
+        interrupted = false,
+        timeout_seconds = options.timeout_seconds,
+        kill_after_seconds = options.kill_after_seconds,
         error = nil,
     }
 end
 
 function CommandRunner.prepare(command, options)
+    options = options or {}
+
     local mode = resolve_mode(options)
 
     if not command or tostring(command) == "" then
@@ -41,11 +50,16 @@ function CommandRunner.prepare(command, options)
             simulated = false,
             executed = false,
             exit_code = nil,
+            reason = nil,
+            timed_out = false,
+            interrupted = false,
+            timeout_seconds = options.timeout_seconds,
+            kill_after_seconds = options.kill_after_seconds,
             error = "Commande invalide",
         }
     end
 
-    return create_result(command, mode)
+    return create_result(command, mode, options)
 end
 
 function CommandRunner.simulate(result)
@@ -56,6 +70,9 @@ function CommandRunner.simulate(result)
     result.simulated = true
     result.executed = false
     result.exit_code = nil
+    result.reason = nil
+    result.timed_out = false
+    result.interrupted = false
 
     if result.mode == "dry-run" then
         print("[CommandRunner] Dry-run : commande préparée")
@@ -73,7 +90,7 @@ function CommandRunner.simulate(result)
     return result
 end
 
-function CommandRunner.execute(result)
+function CommandRunner.execute(result, options)
     if not result or not result.ok then
         return result
     end
@@ -85,7 +102,17 @@ function CommandRunner.execute(result)
     print("[CommandRunner] Apply réel : exécution de la commande")
     print(result.command)
 
-    local system_result = SystemExecutor.execute(result.command)
+    options = options or {}
+
+    local system_result = SystemExecutor.execute(
+        result.command,
+        {
+            timeout_seconds = options.timeout_seconds
+                or result.timeout_seconds,
+            kill_after_seconds = options.kill_after_seconds
+                or result.kill_after_seconds,
+        }
+    )
 
     return {
         ok = system_result.ok,
@@ -96,6 +123,10 @@ function CommandRunner.execute(result)
         executed = system_result.executed,
         exit_code = system_result.exit_code,
         reason = system_result.reason,
+        timed_out = system_result.timed_out == true,
+        interrupted = system_result.interrupted == true,
+        timeout_seconds = system_result.timeout_seconds,
+        kill_after_seconds = system_result.kill_after_seconds,
         system = system_result,
         error = system_result.error,
     }
@@ -115,7 +146,7 @@ function CommandRunner.run(command, options)
     end
 
     if result.mode == "apply-real" then
-        return CommandRunner.execute(result)
+        return CommandRunner.execute(result, options)
     end
 
     return {
@@ -126,6 +157,11 @@ function CommandRunner.run(command, options)
         simulated = false,
         executed = false,
         exit_code = nil,
+        reason = nil,
+        timed_out = false,
+        interrupted = false,
+        timeout_seconds = result.timeout_seconds,
+        kill_after_seconds = result.kill_after_seconds,
         error = "Mode CommandRunner inconnu: " .. tostring(result.mode),
     }
 end

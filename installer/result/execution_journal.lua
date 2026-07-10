@@ -152,6 +152,40 @@ local function resolve_reason(
    return nil
 end
 
+local function resolve_control_boolean(
+   runner_result,
+   system_result,
+   field
+)
+   if runner_result
+      and runner_result[field] == true
+   then
+      return true
+   end
+
+   return system_result
+      and system_result[field] == true
+      or false
+end
+
+local function resolve_control_value(
+   runner_result,
+   system_result,
+   field
+)
+   if runner_result
+      and runner_result[field] ~= nil
+   then
+      return runner_result[field]
+   end
+
+   if system_result then
+      return system_result[field]
+   end
+
+   return nil
+end
+
 local function resolve_stream(system_result, field)
    if type(system_result) ~= "table" then
       return ""
@@ -230,6 +264,26 @@ function ExecutionJournal.create_entry(
       reason = resolve_reason(
          runner_result,
          system_result
+      ),
+      timed_out = resolve_control_boolean(
+         runner_result,
+         system_result,
+         "timed_out"
+      ),
+      interrupted = resolve_control_boolean(
+         runner_result,
+         system_result,
+         "interrupted"
+      ),
+      timeout_seconds = resolve_control_value(
+         runner_result,
+         system_result,
+         "timeout_seconds"
+      ),
+      kill_after_seconds = resolve_control_value(
+         runner_result,
+         system_result,
+         "kill_after_seconds"
       ),
       stdout = resolve_stream(
          system_result,
