@@ -2,6 +2,7 @@ local CommandRunner = require("installer.command_runner")
 local FileOperations = require("installer.file_operations")
 local ServiceOperation = require("installer.service_operation")
 local ShellOperation = require("installer.shell_operation")
+local RetryPolicy = require("installer.retry_policy")
 local ExecutionResult = require("installer.result.execution_result")
 
 local ActionDispatcher = {}
@@ -83,10 +84,136 @@ local function result_details(action, runner_config, runner_result)
     return details
 end
 
+local function summarize_attempt(attempt, result)
+    return {
+        attempt = attempt,
+        ok = result.ok == true,
+        executed = result.executed == true,
+        exit_code = result.exit_code,
+        reason = result.reason,
+        timed_out = result.timed_out == true,
+        interrupted = result.interrupted == true,
+        error = result.error,
+    }
+end
+
+local function attach_retry_metadata(
+    runner_result,
+    policy,
+    attempts,
+    stopped_reason
+)
+    runner_result.retry = {
+        enabled = policy.enabled == true,
+        replay_safe = policy.replay_safe == true,
+        max_attempts = policy.max_attempts,
+        attempts = #attempts,
+        retried = #attempts > 1,
+        exhausted = stopped_reason == "exhausted",
+        stopped_reason = stopped_reason,
+        retry_on_timeout = policy.retry_on_timeout == true,
+        exit_codes = policy.exit_codes,
+        attempt_results = attempts,
+    }
+
+    return runner_result
+end
+
+local function execute_with_retry(
+    action,
+    options,
+    runner_config,
+    policy
+)
+    local attempts = {}
+    local runner_result = nil
+    local stopped_reason = "disabled"
+
+    for attempt = 1, policy.max_attempts do
+        if attempt > 1 then
+            print(
+                "[ActionDispatcher] Retry "
+                    .. tostring(attempt)
+                    .. "/"
+                    .. tostring(policy.max_attempts)
+                    .. " : "
+                    .. action_label(action)
+            )
+        end
+
+        runner_result = runner_config.runner.run(
+            runner_config.input(action),
+            options
+        )
+
+        table.insert(
+            attempts,
+            summarize_attempt(attempt, runner_result)
+        )
+
+        local should_retry
+
+        should_retry, stopped_reason =
+            RetryPolicy.should_retry(
+                policy,
+                runner_result,
+                attempt
+            )
+
+        if not should_retry then
+            break
+        end
+    end
+
+    return attach_retry_metadata(
+        runner_result,
+        policy,
+        attempts,
+        stopped_reason
+    )
+end
+
+local function invalid_retry_result(
+    action,
+    options,
+    error_message
+)
+    return ExecutionResult.fail(
+        action.manager or "unknown",
+        error_message,
+        {
+            dry_run = options.dry_run ~= false,
+            actions = 0,
+            command = action.command,
+            details = {
+                action = action,
+                retry_error = error_message,
+            },
+        }
+    )
+end
+
 local function dispatch_registered_action(action, options, runner_config)
     print("[ActionDispatcher] " .. action_title(action) .. " : " .. action_label(action))
 
-    local runner_result = runner_config.runner.run(runner_config.input(action), options)
+    local retry_policy, retry_error =
+        RetryPolicy.resolve(action)
+
+    if not retry_policy then
+        return invalid_retry_result(
+            action,
+            options,
+            retry_error
+        )
+    end
+
+    local runner_result = execute_with_retry(
+        action,
+        options,
+        runner_config,
+        retry_policy
+    )
+
     local details = result_details(action, runner_config, runner_result)
 
     if not runner_result.ok then

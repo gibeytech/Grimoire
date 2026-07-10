@@ -48,6 +48,28 @@ local function count_executed_actions(results)
    return total
 end
 
+local function count_total_attempts(journal)
+   local total = 0
+
+   for _, entry in ipairs(journal or {}) do
+      total = total + (entry.retry_attempts or 0)
+   end
+
+   return total
+end
+
+local function count_retried_actions(journal)
+   local total = 0
+
+   for _, entry in ipairs(journal or {}) do
+      if entry.retried == true then
+         total = total + 1
+      end
+   end
+
+   return total
+end
+
 local function resolve_failure_status(rollback)
    if rollback
       and rollback.attempted == true
@@ -85,6 +107,11 @@ local function resolve_control_metadata(journal)
       timeout_seconds = entry.timeout_seconds,
       kill_after_seconds =
          entry.kill_after_seconds,
+      retry_attempts = entry.retry_attempts or 0,
+      retry_exhausted =
+         entry.retry_exhausted == true,
+      retry_stopped_reason =
+         entry.retry_stopped_reason,
    }
 end
 
@@ -110,6 +137,13 @@ local function failure_result(
       timeout_seconds = control.timeout_seconds,
       kill_after_seconds =
          control.kill_after_seconds,
+      retry_attempts = control.retry_attempts,
+      retry_exhausted = control.retry_exhausted,
+      retry_stopped_reason =
+         control.retry_stopped_reason,
+      total_attempts = count_total_attempts(journal),
+      retried_actions =
+         count_retried_actions(journal),
       failed_at = failed_result.manager,
       results = results,
       journal = journal,
@@ -180,6 +214,11 @@ function Executor.run(execution_plan, options)
          interrupted = false,
          timeout_seconds = nil,
          kill_after_seconds = nil,
+         retry_attempts = 0,
+         retry_exhausted = false,
+         retry_stopped_reason = nil,
+         total_attempts = 0,
+         retried_actions = 0,
          failed_at = "executor",
          results = results,
          journal = journal,
@@ -256,6 +295,12 @@ function Executor.run(execution_plan, options)
       interrupted = false,
       timeout_seconds = nil,
       kill_after_seconds = nil,
+      retry_attempts = 0,
+      retry_exhausted = false,
+      retry_stopped_reason = nil,
+      total_attempts = count_total_attempts(journal),
+      retried_actions =
+         count_retried_actions(journal),
       results = results,
       journal = journal,
       rollback =

@@ -69,6 +69,38 @@ local function clone_table(value)
    return clone
 end
 
+local function clone_retry_metadata(runner_result)
+   if type(runner_result) ~= "table"
+      or type(runner_result.retry) ~= "table"
+   then
+      return nil
+   end
+
+   local retry = runner_result.retry
+   local clone = clone_table(retry)
+
+   clone.exit_codes = {}
+
+   for _, exit_code in ipairs(
+      retry.exit_codes or {}
+   ) do
+      table.insert(clone.exit_codes, exit_code)
+   end
+
+   clone.attempt_results = {}
+
+   for _, attempt in ipairs(
+      retry.attempt_results or {}
+   ) do
+      table.insert(
+         clone.attempt_results,
+         clone_table(attempt)
+      )
+   end
+
+   return clone
+end
+
 local function resolve_compensation(runner_result)
    if type(runner_result) ~= "table" then
       return nil
@@ -230,6 +262,10 @@ function ExecutionJournal.create_entry(
       runner_result
    )
 
+   local retry = clone_retry_metadata(
+      runner_result
+   )
+
    return {
       sequence = context.sequence or 0,
       total = context.total or 0,
@@ -285,6 +321,25 @@ function ExecutionJournal.create_entry(
          system_result,
          "kill_after_seconds"
       ),
+      retry = retry,
+      retry_enabled = retry
+         and retry.enabled == true
+         or false,
+      retry_attempts = retry
+         and retry.attempts
+         or 0,
+      retry_max_attempts = retry
+         and retry.max_attempts
+         or 1,
+      retried = retry
+         and retry.retried == true
+         or false,
+      retry_exhausted = retry
+         and retry.exhausted == true
+         or false,
+      retry_stopped_reason = retry
+         and retry.stopped_reason
+         or nil,
       stdout = resolve_stream(
          system_result,
          "stdout"
