@@ -3,7 +3,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local ExecutionPlan = require("installer.model.execution_plan")
 local Executor = require("installer.executor")
 
-print("== Executor RC2-B3 Apply-Real Integration Test ==")
+print("== Executor RC2-B4 Apply-Real Integration Test ==")
 
 local execution_plan = ExecutionPlan:new({
     profile = {
@@ -29,9 +29,10 @@ local result = Executor.execute(execution_plan, {
 
 assert(result.ok == true)
 assert(result.dry_run == false)
-assert(result.mode == "apply-safe")
+assert(result.mode == "apply-real")
 assert(type(result.results) == "table")
 assert(#result.results == 1)
+assert(result.executed_actions == 1)
 
 local action_result = result.results[1]
 
@@ -50,4 +51,8 @@ assert(action_result.details.runner.exit_code == 0)
 assert(action_result.details.runner.error == nil)
 
 print("")
-print("RC2-B3 OK : Executor traverse toute la chaîne apply-real.")
+print("Mode global       : " .. tostring(result.mode))
+print("Actions exécutées : " .. tostring(result.executed_actions))
+
+print("")
+print("RC2-B4 OK : Executor expose correctement le mode apply-real.")
