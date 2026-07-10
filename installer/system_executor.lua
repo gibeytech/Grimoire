@@ -35,25 +35,85 @@ local function path_is_in_tmp(path)
       and path:match("^/tmp/") ~= nil
 end
 
-local function remove_file(path)
+local function path_exists(path)
    if not path then
-      return
+      return false
    end
 
-   pcall(os.remove, path)
+   local file = io.open(path, "rb")
+
+   if not file then
+      return false
+   end
+
+   file:close()
+
+   return true
+end
+
+local function remove_file(path)
+   if not path or not path_exists(path) then
+      return true, nil
+   end
+
+   local call_ok, removed, remove_error = pcall(
+      os.remove,
+      path
+   )
+
+   if not call_ok then
+      return false, tostring(removed)
+   end
+
+   if removed == nil and path_exists(path) then
+      return false, tostring(
+         remove_error or "Suppression impossible"
+      )
+   end
+
+   return true, nil
+end
+
+local function append_detail(message, detail)
+   if not detail or tostring(detail) == "" then
+      return message
+   end
+
+   return tostring(message) .. "; " .. tostring(detail)
 end
 
 local function create_temp_path()
-   local call_ok, path_or_error = pcall(os.tmpname)
+   local call_ok, path_or_error, additional_error = pcall(
+      os.tmpname
+   )
 
    if not call_ok then
       return nil, tostring(path_or_error)
    end
 
-   if not path_is_in_tmp(path_or_error) then
-      remove_file(path_or_error)
+   if type(path_or_error) ~= "string"
+      or path_or_error == ""
+   then
+      return nil, tostring(
+         additional_error
+            or "os.tmpname n'a retourné aucun chemin"
+      )
+   end
 
-      return nil, "Le chemin temporaire n'est pas situé dans /tmp"
+   if not path_is_in_tmp(path_or_error) then
+      local removed, remove_error = remove_file(path_or_error)
+
+      local message =
+         "Le chemin temporaire n'est pas situé dans /tmp"
+
+      if not removed then
+         message = append_detail(
+            message,
+            "nettoyage impossible: " .. tostring(remove_error)
+         )
+      end
+
+      return nil, message
    end
 
    return path_or_error, nil
@@ -69,23 +129,72 @@ local function create_capture_paths()
    local stderr_path, stderr_error = create_temp_path()
 
    if not stderr_path then
-      remove_file(stdout_path)
+      local removed, remove_error = remove_file(stdout_path)
 
-      return nil, nil, stderr_error
+      local message = tostring(stderr_error)
+
+      if not removed then
+         message = append_detail(
+            message,
+            "nettoyage de stdout impossible: "
+               .. tostring(remove_error)
+         )
+      end
+
+      return nil, nil, message
    end
 
    if stdout_path == stderr_path then
-      remove_file(stdout_path)
+      local removed, remove_error = remove_file(stdout_path)
 
-      return nil, nil, "Les chemins de capture sont identiques"
+      local message = "Les chemins de capture sont identiques"
+
+      if not removed then
+         message = append_detail(
+            message,
+            "nettoyage impossible: " .. tostring(remove_error)
+         )
+      end
+
+      return nil, nil, message
    end
 
    return stdout_path, stderr_path, nil
 end
 
-local function cleanup_capture_paths(stdout_path, stderr_path)
-   remove_file(stdout_path)
-   remove_file(stderr_path)
+local function cleanup_capture_paths(
+   stdout_path,
+   stderr_path
+)
+   local errors = {}
+
+   local stdout_removed, stdout_error = remove_file(
+      stdout_path
+   )
+
+   if not stdout_removed then
+      table.insert(
+         errors,
+         "stdout: " .. tostring(stdout_error)
+      )
+   end
+
+   local stderr_removed, stderr_error = remove_file(
+      stderr_path
+   )
+
+   if not stderr_removed then
+      table.insert(
+         errors,
+         "stderr: " .. tostring(stderr_error)
+      )
+   end
+
+   if #errors > 0 then
+      return false, table.concat(errors, "; ")
+   end
+
+   return true, nil
 end
 
 local function read_capture(path)
@@ -111,7 +220,9 @@ local function read_capture(path)
    end
 
    if content == nil then
-      return nil, tostring(read_error or "Lecture impossible")
+      return nil, tostring(
+         read_error or "Lecture impossible"
+      )
    end
 
    if not close_ok then
@@ -119,7 +230,9 @@ local function read_capture(path)
    end
 
    if close_result == nil then
-      return nil, tostring(close_error or "Fermeture impossible")
+      return nil, tostring(
+         close_error or "Fermeture impossible"
+      )
    end
 
    return content, nil
@@ -205,43 +318,99 @@ function SystemExecutor.execute(command)
    )
 
    if not call_ok then
-      cleanup_capture_paths(stdout_path, stderr_path)
+      local cleanup_ok, cleanup_error =
+         cleanup_capture_paths(
+            stdout_path,
+            stderr_path
+         )
+
+      local message =
+         "échec interne pendant l'exécution: "
+            .. tostring(ok)
+
+      if not cleanup_ok then
+         message = append_detail(
+            message,
+            "nettoyage impossible: "
+               .. tostring(cleanup_error)
+         )
+      end
 
       return create_internal_error_result(
          command,
-         "échec interne pendant l'exécution: " .. tostring(ok)
+         message
       )
    end
 
-   local exit_code = normalize_exit_code(ok, reason, code)
+   local exit_code = normalize_exit_code(
+      ok,
+      reason,
+      code
+   )
 
    local stdout, stdout_error = read_capture(stdout_path)
    local stderr, stderr_error = read_capture(stderr_path)
 
-   cleanup_capture_paths(stdout_path, stderr_path)
+   local cleanup_ok, cleanup_error =
+      cleanup_capture_paths(
+         stdout_path,
+         stderr_path
+      )
+
+   local read_errors = {}
 
    if stdout == nil then
-      return create_internal_error_result(
-         command,
-         "impossible de lire stdout: " .. tostring(stdout_error),
-         {
-            executed = true,
-            exit_code = exit_code,
-            reason = reason,
-            stderr = stderr,
-         }
+      table.insert(
+         read_errors,
+         "impossible de lire stdout: "
+            .. tostring(stdout_error)
       )
    end
 
    if stderr == nil then
+      table.insert(
+         read_errors,
+         "impossible de lire stderr: "
+            .. tostring(stderr_error)
+      )
+   end
+
+   if #read_errors > 0 then
+      local message = table.concat(read_errors, "; ")
+
+      if not cleanup_ok then
+         message = append_detail(
+            message,
+            "nettoyage impossible: "
+               .. tostring(cleanup_error)
+         )
+      end
+
       return create_internal_error_result(
          command,
-         "impossible de lire stderr: " .. tostring(stderr_error),
+         message,
          {
             executed = true,
             exit_code = exit_code,
             reason = reason,
             stdout = stdout,
+            stderr = stderr,
+         }
+      )
+   end
+
+   if not cleanup_ok then
+      return create_internal_error_result(
+         command,
+         "impossible de nettoyer les fichiers "
+            .. "temporaires de capture: "
+            .. tostring(cleanup_error),
+         {
+            executed = true,
+            exit_code = exit_code,
+            reason = reason,
+            stdout = stdout,
+            stderr = stderr,
          }
       )
    end
