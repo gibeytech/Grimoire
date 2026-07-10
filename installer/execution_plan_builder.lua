@@ -1,6 +1,18 @@
-local ExecutionPlan = require("installer.model.execution_plan")
-local PackageManager = require("installer.managers.package_manager")
-local PathResolver = require("installer.path_resolver")
+local ExecutionPlan = require(
+    "installer.model.execution_plan"
+)
+
+local PackageManager = require(
+    "installer.managers.package_manager"
+)
+
+local PathResolver = require(
+    "installer.path_resolver"
+)
+
+local ServiceSpec = require(
+    "installer.model.service_spec"
+)
 
 local ExecutionPlanBuilder = {}
 
@@ -24,7 +36,8 @@ local function add_action(actions, action)
 end
 
 local function value_is_present(value)
-    return value ~= nil and tostring(value) ~= ""
+    return value ~= nil
+        and tostring(value) ~= ""
 end
 
 local function clone_sequential_table(value)
@@ -50,7 +63,8 @@ local function clone_retry_policy(value)
 
     for key, item in pairs(value) do
         if key == "exit_codes" then
-            clone[key] = clone_sequential_table(item)
+            clone[key] =
+                clone_sequential_table(item)
         else
             clone[key] = item
         end
@@ -102,18 +116,22 @@ local function join_paths(base, relative)
     while #normalized_base > 1
         and normalized_base:sub(-1) == "/"
     do
-        normalized_base = normalized_base:sub(1, -2)
+        normalized_base =
+            normalized_base:sub(1, -2)
     end
 
     while normalized_relative:sub(1, 1) == "/" do
-        normalized_relative = normalized_relative:sub(2)
+        normalized_relative =
+            normalized_relative:sub(2)
     end
 
     if normalized_relative == "" then
         return normalized_base
     end
 
-    return normalized_base .. "/" .. normalized_relative
+    return normalized_base
+        .. "/"
+        .. normalized_relative
 end
 
 local function resolve_path(path, options)
@@ -133,26 +151,44 @@ local function resolve_path(path, options)
     return result.path
 end
 
-local function resolve_profile_source(profile, source, options)
+local function resolve_profile_source(
+    profile,
+    source,
+    options
+)
     if not value_is_present(source) then
         return source
     end
 
-    if path_is_absolute(source) or path_uses_home(source) then
+    if path_is_absolute(source)
+        or path_uses_home(source)
+    then
         return resolve_path(source, options)
     end
 
-    if profile and value_is_present(profile.root) then
-        return join_paths(profile.root, source)
+    if profile
+        and value_is_present(profile.root)
+    then
+        return join_paths(
+            profile.root,
+            source
+        )
     end
 
     return source
 end
 
 local function add_package_actions(actions, plan)
-    local packages = PackageManager.collect_packages(plan)
-    local command = PackageManager.build_pacman_command(packages)
-    local robustness = package_robustness(plan)
+    local packages =
+        PackageManager.collect_packages(plan)
+
+    local command =
+        PackageManager.build_pacman_command(
+            packages
+        )
+
+    local robustness =
+        package_robustness(plan)
 
     if command then
         add_action(actions, {
@@ -161,33 +197,49 @@ local function add_package_actions(actions, plan)
             name = "install-packages",
             command = command,
             count = #packages,
-            timeout_seconds = robustness.timeout_seconds,
-            kill_after_seconds = robustness.kill_after_seconds,
-            retry = clone_retry_policy(robustness.retry),
+            timeout_seconds =
+                robustness.timeout_seconds,
+            kill_after_seconds =
+                robustness.kill_after_seconds,
+            retry =
+                clone_retry_policy(
+                    robustness.retry
+                ),
         })
     end
 end
 
-local function add_service_actions(actions, plan)
-    local services = plan:getServices()
+local function service_definitions(plan)
+    local definitions, errors =
+        ServiceSpec.collect(
+            plan:getServices()
+        )
 
-    for _, service in ipairs(services.enabled or {}) do
-        add_action(actions, {
-            type = "service_operation",
-            manager = "services",
-            name = "enable-service",
-            service = service,
-            operation = "enable",
-        })
+    if #errors > 0 then
+        error(
+            "Configuration services invalide :\n- "
+                .. table.concat(errors, "\n- ")
+        )
     end
 
-    for _, service in ipairs(services.disabled or {}) do
+    return definitions
+end
+
+local function add_service_actions(actions, plan)
+    for _, definition in ipairs(
+        service_definitions(plan)
+    ) do
         add_action(actions, {
             type = "service_operation",
             manager = "services",
-            name = "disable-service",
-            service = service,
-            operation = "disable",
+            name =
+                definition.operation
+                    .. "-service",
+            service = definition.unit,
+            unit = definition.unit,
+            operation =
+                definition.operation,
+            scope = definition.scope,
         })
     end
 end
@@ -195,7 +247,9 @@ end
 local function add_shell_actions(actions, plan)
     local shell = plan:getShell()
 
-    for _, module in ipairs(shell.modules or {}) do
+    for _, module in ipairs(
+        shell.modules or {}
+    ) do
         add_action(actions, {
             type = "shell_operation",
             manager = "shell",
@@ -206,7 +260,11 @@ local function add_shell_actions(actions, plan)
     end
 end
 
-local function add_asset_actions(actions, plan, options)
+local function add_asset_actions(
+    actions,
+    plan,
+    options
+)
     local profile = plan:getProfile()
     local assets = plan:getAssets()
 
@@ -217,22 +275,29 @@ local function add_asset_actions(actions, plan, options)
             name = name,
             operation = {
                 type = "copy",
-                source = resolve_profile_source(
-                    profile,
-                    config.source,
-                    options
-                ),
-                destination = resolve_path(
-                    config.destination,
-                    options
-                ),
-                overwrite = config.overwrite,
+                source =
+                    resolve_profile_source(
+                        profile,
+                        config.source,
+                        options
+                    ),
+                destination =
+                    resolve_path(
+                        config.destination,
+                        options
+                    ),
+                overwrite =
+                    config.overwrite,
             },
         })
     end
 end
 
-local function add_deploy_actions(actions, plan, options)
+local function add_deploy_actions(
+    actions,
+    plan,
+    options
+)
     local profile = plan:getProfile()
     local dotfiles = plan:getDotfiles()
 
@@ -243,16 +308,20 @@ local function add_deploy_actions(actions, plan, options)
             name = "dotfiles",
             operation = {
                 type = "symlink",
-                source = resolve_profile_source(
-                    profile,
-                    dotfiles.source,
-                    options
-                ),
-                destination = resolve_path(
-                    dotfiles.destination or "~/.config",
-                    options
-                ),
-                overwrite = dotfiles.overwrite,
+                source =
+                    resolve_profile_source(
+                        profile,
+                        dotfiles.source,
+                        options
+                    ),
+                destination =
+                    resolve_path(
+                        dotfiles.destination
+                            or "~/.config",
+                        options
+                    ),
+                overwrite =
+                    dotfiles.overwrite,
             },
         })
     end

@@ -1,3 +1,7 @@
+local ServiceSpec = require(
+    "installer.model.service_spec"
+)
+
 local ServiceOperation = {}
 
 local function resolve_mode(options)
@@ -14,12 +18,14 @@ local function resolve_mode(options)
     return "apply-safe"
 end
 
-local function create_result(action, mode)
+local function create_result(definition, mode)
     return {
         ok = true,
         mode = mode,
-        service = action.service,
-        operation = action.operation,
+        service = definition.unit,
+        unit = definition.unit,
+        operation = definition.operation,
+        scope = definition.scope,
         prepared = true,
         simulated = false,
         executed = false,
@@ -27,43 +33,61 @@ local function create_result(action, mode)
     }
 end
 
-local function action_is_valid(action)
-    if type(action) ~= "table" then
-        return false
-    end
-
-    if not action.service or tostring(action.service) == "" then
-        return false
-    end
-
-    if not action.operation or tostring(action.operation) == "" then
-        return false
-    end
-
-    return true
+local function create_invalid_result(
+    action,
+    mode,
+    error_message
+)
+    return {
+        ok = false,
+        mode = mode,
+        service = action
+            and (action.service or action.unit)
+            or nil,
+        unit = action
+            and (action.unit or action.service)
+            or nil,
+        operation = action
+            and action.operation
+            or nil,
+        scope = action
+            and action.scope
+            or nil,
+        prepared = false,
+        simulated = false,
+        executed = false,
+        error = error_message
+            or "Opération service invalide",
+    }
 end
 
 local function print_operation(result)
-    print("[ServiceOperation] " .. tostring(result.operation) .. " : " .. tostring(result.service))
+    print(
+        "[ServiceOperation] "
+            .. tostring(result.operation)
+            .. " ["
+            .. tostring(result.scope)
+            .. "] : "
+            .. tostring(result.unit)
+    )
 end
 
 function ServiceOperation.prepare(action, options)
     local mode = resolve_mode(options)
 
-    if not action_is_valid(action) then
-        return {
-            ok = false,
-            mode = mode,
-            service = action and action.service or nil,
-            operation = action and action.operation or nil,
-            prepared = false,
-            simulated = false,
-            executed = false,
-            error = "Opération service invalide",
-        }
+    local definition, definition_error =
+        ServiceSpec.normalize(action)
+
+    if not definition then
+        return create_invalid_result(
+            action,
+            mode,
+            definition_error
+                or "Opération service invalide"
+        )
     end
 
-    return create_result(action, mode)
+    return create_result(definition, mode)
 end
 
 function ServiceOperation.simulate(result)
@@ -77,12 +101,25 @@ function ServiceOperation.simulate(result)
     print_operation(result)
 
     if result.mode == "dry-run" then
-        print("[ServiceOperation] Dry-run : aucune action systemctl exécutée")
+        print(
+            "[ServiceOperation] Dry-run : "
+                .. "aucune action systemctl exécutée"
+        )
     elseif result.mode == "apply-safe" then
-        print("[ServiceOperation] Apply sécurisé : service préparé mais non modifié")
-        print("[ServiceOperation] Action systemctl bloquée volontairement en RC2-05")
+        print(
+            "[ServiceOperation] Apply sécurisé : "
+                .. "service préparé mais non modifié"
+        )
+
+        print(
+            "[ServiceOperation] Action systemctl "
+                .. "bloquée pendant RC4-A1"
+        )
     else
-        print("[ServiceOperation] Simulation : mode " .. tostring(result.mode))
+        print(
+            "[ServiceOperation] Simulation : mode "
+                .. tostring(result.mode)
+        )
     end
 
     return result
@@ -101,24 +138,32 @@ function ServiceOperation.execute(result)
         ok = false,
         mode = result.mode,
         service = result.service,
+        unit = result.unit,
         operation = result.operation,
+        scope = result.scope,
         prepared = true,
         simulated = false,
         executed = false,
-        error = "Mode apply-real non activé en RC2-05",
+        error =
+            "Mode apply-real non activé pendant RC4-A1",
     }
 end
 
 function ServiceOperation.run(action, options)
     options = options or {}
 
-    local result = ServiceOperation.prepare(action, options)
+    local result = ServiceOperation.prepare(
+        action,
+        options
+    )
 
     if not result.ok then
         return result
     end
 
-    if result.mode == "dry-run" or result.mode == "apply-safe" then
+    if result.mode == "dry-run"
+        or result.mode == "apply-safe"
+    then
         return ServiceOperation.simulate(result)
     end
 
@@ -126,16 +171,12 @@ function ServiceOperation.run(action, options)
         return ServiceOperation.execute(result)
     end
 
-    return {
-        ok = false,
-        mode = result.mode,
-        service = action and action.service or nil,
-        operation = action and action.operation or nil,
-        prepared = result.prepared == true,
-        simulated = false,
-        executed = false,
-        error = "Mode ServiceOperation inconnu: " .. tostring(result.mode),
-    }
+    return create_invalid_result(
+        action,
+        result.mode,
+        "Mode ServiceOperation inconnu: "
+            .. tostring(result.mode)
+    )
 end
 
 return ServiceOperation
