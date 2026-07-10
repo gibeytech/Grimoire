@@ -19,6 +19,7 @@ function Builder.build(profile_id)
         shell = profile:getShell(),
         theme = profile:getTheme(),
         assets = profile:getAssets(),
+        robustness = profile:getRobustness(),
         dotfiles = profile:getDotfiles(),
     })
 end

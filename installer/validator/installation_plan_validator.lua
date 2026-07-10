@@ -7,6 +7,7 @@ local REQUIRED_METHODS = {
     "getShell",
     "getTheme",
     "getAssets",
+    "getRobustness",
 }
 
 local function add_error(errors, message)
@@ -67,6 +68,10 @@ function InstallationPlanValidator.validate(plan)
 
     if type(plan:getAssets()) ~= "table" then
         add_error(errors, "Assets invalides dans le plan.")
+    end
+
+    if type(plan:getRobustness()) ~= "table" then
+        add_error(errors, "Politiques de robustesse invalides dans le plan.")
     end
 
     return #errors == 0, errors

@@ -10,6 +10,7 @@ local REQUIRED_METHODS = {
     "getShell",
     "getTheme",
     "getAssets",
+    "getRobustness",
 }
 
 local function add_error(errors, message)
@@ -68,6 +69,10 @@ function ProfileValidator.validate(profile)
 
     if type(profile:getAssets()) ~= "table" then
         add_error(errors, "Configuration assets invalide ou absente.")
+    end
+
+    if type(profile:getRobustness()) ~= "table" then
+        add_error(errors, "Configuration robustness invalide ou absente.")
     end
 
     return #errors == 0, errors

@@ -13,6 +13,7 @@ function InstallationPlan:new(data)
     plan.shell = data.shell or {}
     plan.theme = data.theme or {}
     plan.assets = data.assets or {}
+    plan.robustness = data.robustness or {}
     plan.dotfiles = data.dotfiles or {}
 
     return plan
@@ -40,6 +41,10 @@ end
 
 function InstallationPlan:getAssets()
     return self.assets
+end
+
+function InstallationPlan:getRobustness()
+    return self.robustness
 end
 
 function InstallationPlan:getDotfiles()

@@ -84,6 +84,26 @@ local function result_details(action, runner_config, runner_result)
     return details
 end
 
+local function build_runner_options(action, options)
+    local runner_options = {}
+
+    for key, value in pairs(options or {}) do
+        runner_options[key] = value
+    end
+
+    if action.timeout_seconds ~= nil then
+        runner_options.timeout_seconds =
+            action.timeout_seconds
+    end
+
+    if action.kill_after_seconds ~= nil then
+        runner_options.kill_after_seconds =
+            action.kill_after_seconds
+    end
+
+    return runner_options
+end
+
 local function summarize_attempt(attempt, result)
     return {
         attempt = attempt,
@@ -128,6 +148,10 @@ local function execute_with_retry(
     local attempts = {}
     local runner_result = nil
     local stopped_reason = "disabled"
+    local runner_options = build_runner_options(
+        action,
+        options
+    )
 
     for attempt = 1, policy.max_attempts do
         if attempt > 1 then
@@ -143,7 +167,7 @@ local function execute_with_retry(
 
         runner_result = runner_config.runner.run(
             runner_config.input(action),
-            options
+            runner_options
         )
 
         table.insert(

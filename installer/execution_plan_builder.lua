@@ -27,6 +27,54 @@ local function value_is_present(value)
     return value ~= nil and tostring(value) ~= ""
 end
 
+local function clone_sequential_table(value)
+    if type(value) ~= "table" then
+        return value
+    end
+
+    local clone = {}
+
+    for index, item in ipairs(value) do
+        clone[index] = item
+    end
+
+    return clone
+end
+
+local function clone_retry_policy(value)
+    if type(value) ~= "table" then
+        return value
+    end
+
+    local clone = {}
+
+    for key, item in pairs(value) do
+        if key == "exit_codes" then
+            clone[key] = clone_sequential_table(item)
+        else
+            clone[key] = item
+        end
+    end
+
+    return clone
+end
+
+local function package_robustness(plan)
+    if type(plan.getRobustness) ~= "function" then
+        return {}
+    end
+
+    local robustness = plan:getRobustness()
+
+    if type(robustness) ~= "table"
+        or type(robustness.packages) ~= "table"
+    then
+        return {}
+    end
+
+    return robustness.packages
+end
+
 local function path_is_absolute(path)
     return value_is_present(path)
         and tostring(path):sub(1, 1) == "/"
@@ -104,6 +152,7 @@ end
 local function add_package_actions(actions, plan)
     local packages = PackageManager.collect_packages(plan)
     local command = PackageManager.build_pacman_command(packages)
+    local robustness = package_robustness(plan)
 
     if command then
         add_action(actions, {
@@ -112,6 +161,9 @@ local function add_package_actions(actions, plan)
             name = "install-packages",
             command = command,
             count = #packages,
+            timeout_seconds = robustness.timeout_seconds,
+            kill_after_seconds = robustness.kill_after_seconds,
+            retry = clone_retry_policy(robustness.retry),
         })
     end
 end

@@ -8,6 +8,7 @@ local REQUIRED_CONFIGS = {
   "shell",
   "theme",
   "assets",
+  "robustness",
 }
 
 local function load_lua_table(path)

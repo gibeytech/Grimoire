@@ -17,6 +17,7 @@ return {
         shell = "config/shell.lua",
         theme = "config/theme.lua",
         assets = "config/assets.lua",
+        robustness = "config/robustness.lua",
     },
 
     dotfiles = {

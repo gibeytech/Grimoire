@@ -58,6 +58,10 @@ function Profile:getAssets()
     return self.config.assets
 end
 
+function Profile:getRobustness()
+    return self.config.robustness
+end
+
 function Profile:getDotfiles()
     return self.manifest.dotfiles
 end
