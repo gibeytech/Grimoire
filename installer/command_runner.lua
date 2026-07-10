@@ -1,3 +1,5 @@
+local SystemExecutor = require("installer.system_executor")
+
 local CommandRunner = {}
 
 local function resolve_mode(options)
@@ -23,6 +25,7 @@ local function create_result(command, mode)
         simulated = false,
         executed = false,
         exit_code = nil,
+        error = nil,
     }
 end
 
@@ -59,7 +62,7 @@ function CommandRunner.simulate(result)
         print(result.command)
     elseif result.mode == "apply-safe" then
         print("[CommandRunner] Apply sécurisé : commande préparée mais non exécutée")
-        print("[CommandRunner] Action système bloquée volontairement en RC2-01")
+        print("[CommandRunner] Action système bloquée volontairement")
         print("[CommandRunner] Commande préparée :")
         print(result.command)
     else
@@ -79,15 +82,22 @@ function CommandRunner.execute(result)
         return CommandRunner.simulate(result)
     end
 
+    print("[CommandRunner] Apply réel : exécution de la commande")
+    print(result.command)
+
+    local system_result = SystemExecutor.execute(result.command)
+
     return {
-        ok = false,
+        ok = system_result.ok,
         mode = result.mode,
         command = result.command,
         prepared = true,
         simulated = false,
-        executed = false,
-        exit_code = nil,
-        error = "Mode apply-real non activé en RC2-01",
+        executed = system_result.executed,
+        exit_code = system_result.exit_code,
+        reason = system_result.reason,
+        system = system_result,
+        error = system_result.error,
     }
 end
 

@@ -16,6 +16,14 @@ local function normalize_exit_code(ok, reason, code)
     return 1
 end
 
+local function resolve_error(exit_code)
+    if exit_code == 0 then
+        return nil
+    end
+
+    return "Commande système échouée"
+end
+
 function SystemExecutor.execute(command)
     if not command or tostring(command) == "" then
         return {
@@ -23,6 +31,7 @@ function SystemExecutor.execute(command)
             command = command,
             executed = false,
             exit_code = nil,
+            reason = nil,
             error = "Commande système invalide",
         }
     end
@@ -36,7 +45,7 @@ function SystemExecutor.execute(command)
         executed = true,
         exit_code = exit_code,
         reason = reason,
-        error = exit_code == 0 and nil or "Commande système échouée",
+        error = resolve_error(exit_code),
     }
 end
 
