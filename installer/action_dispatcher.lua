@@ -87,6 +87,14 @@ local function result_details(action, runner_config, runner_result)
             runner_result.strategy
         details.entrypoint =
             runner_result.entrypoint
+        details.changed =
+            runner_result.changed
+        details.already_satisfied =
+            runner_result.already_satisfied
+        details.skipped =
+            runner_result.skipped
+        details.status =
+            runner_result.status
     end
 
     return details

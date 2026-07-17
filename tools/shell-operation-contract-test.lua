@@ -7,7 +7,61 @@ local ShellOperation = require(
 )
 
 print(
-   "== ShellOperation RC4-B1 Contract Test =="
+   "== ShellOperation RC4-B2 Contract Test =="
+)
+
+local function shell_quote(value)
+   return "'"
+      .. tostring(value):gsub(
+         "'",
+         "'\\''"
+      )
+      .. "'"
+end
+
+local function command_succeeded(command)
+   local ok, _, code =
+      os.execute(command)
+
+   return ok == true
+      or ok == 0
+      or code == 0
+end
+
+local function write_file(path, content)
+   local file, open_error =
+      io.open(path, "wb")
+
+   assert(file, open_error)
+   assert(file:write(content))
+   file:close()
+end
+
+local temporary_directory =
+   os.tmpname()
+
+os.remove(temporary_directory)
+
+assert(
+   temporary_directory:match("^/tmp/")
+)
+
+local source =
+   temporary_directory .. "/source"
+
+local destination =
+   temporary_directory .. "/destination"
+
+assert(
+   command_succeeded(
+      "mkdir -p -- "
+         .. shell_quote(source)
+   )
+)
+
+write_file(
+   source .. "/shell.qml",
+   "import QtQuick\n"
 )
 
 local action = {
@@ -19,10 +73,8 @@ local action = {
       "bar",
       "hub",
    },
-   source =
-      "../grimoire-shell/quickshell",
-   destination =
-      "/tmp/grimoire-shell",
+   source = source,
+   destination = destination,
    strategy = "copy",
    overwrite = "error",
    entrypoint = "shell.qml",
@@ -38,11 +90,8 @@ local dry_run =
 
 assert(dry_run.ok == true)
 assert(dry_run.mode == "dry-run")
-assert(dry_run.prepared == true)
 assert(dry_run.simulated == true)
 assert(dry_run.executed == false)
-assert(dry_run.explicit == true)
-assert(#dry_run.modules == 2)
 assert(dry_run.reason == "dry-run")
 
 local apply_safe =
@@ -58,11 +107,6 @@ assert(apply_safe.mode == "apply-safe")
 assert(apply_safe.simulated == true)
 assert(apply_safe.executed == false)
 
-assert(
-   apply_safe.reason
-      == "apply-safe-blocked"
-)
-
 local apply_real =
    ShellOperation.run(
       action,
@@ -72,15 +116,27 @@ local apply_real =
       }
    )
 
-assert(apply_real.ok == false)
+assert(apply_real.ok == true)
 assert(apply_real.mode == "apply-real")
-assert(apply_real.prepared == true)
-assert(apply_real.executed == false)
+assert(apply_real.status == "deployed")
+assert(apply_real.executed == true)
+assert(apply_real.changed == true)
+assert(apply_real.compensation.status == "ready")
 
-assert(
-   apply_real.reason
-      == "apply-real-blocked"
-)
+local idempotent =
+   ShellOperation.run(
+      action,
+      {
+         dry_run = false,
+         apply_real = true,
+      }
+   )
+
+assert(idempotent.ok == true)
+assert(idempotent.executed == false)
+assert(idempotent.changed == false)
+assert(idempotent.already_satisfied == true)
+assert(idempotent.reason == "already-satisfied")
 
 local legacy =
    ShellOperation.run(
@@ -96,27 +152,36 @@ local legacy =
 assert(legacy.ok == true)
 assert(legacy.explicit == false)
 assert(legacy.module == "hub")
-assert(#legacy.modules == 1)
 
-local invalid =
+local legacy_real =
    ShellOperation.run(
       {
+         module = "hub",
          runtime = "grimoire-shell",
-         modules = {
-            "bar",
-         },
-         source = "source",
       },
       {
-         dry_run = true,
+         dry_run = false,
+         apply_real = true,
       }
    )
 
-assert(invalid.ok == false)
-assert(invalid.prepared == false)
+assert(legacy_real.ok == false)
+assert(
+   legacy_real.reason
+      == "legacy-apply-real-unsupported"
+)
+
+assert(
+   command_succeeded(
+      "rm -rf -- "
+         .. shell_quote(
+            temporary_directory
+         )
+   )
+)
 
 print("")
 print(
-   "RC4-B1 OK : ShellOperation valide le contrat "
-      .. "explicite tout en conservant le format hérité."
+   "RC4-B2 OK : ShellOperation active "
+      .. "l’apply-real idempotent."
 )

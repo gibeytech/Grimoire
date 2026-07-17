@@ -2,6 +2,10 @@ local ShellSpec = require(
    "installer.model.shell_spec"
 )
 
+local ShellDeploymentExecutor = require(
+   "installer.shell_deployment_executor"
+)
+
 local ShellOperation = {}
 
 local function resolve_mode(options)
@@ -36,6 +40,7 @@ local function create_failure(
    return {
       ok = false,
       mode = mode,
+      status = "invalid",
       module = action.module,
       modules =
          clone_modules(
@@ -43,7 +48,9 @@ local function create_failure(
          ),
       runtime = action.runtime,
       source = action.source,
+      source_resolved = nil,
       destination = action.destination,
+      destination_state = nil,
       strategy = action.strategy,
       overwrite = action.overwrite,
       entrypoint = action.entrypoint,
@@ -51,8 +58,21 @@ local function create_failure(
       prepared = false,
       simulated = false,
       executed = false,
+      changed = false,
+      already_satisfied = false,
+      skipped = false,
       command = nil,
+      exit_code = nil,
       reason = nil,
+      stdout = "",
+      stderr = "",
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
+      system_result = nil,
+      verification_result = nil,
+      compensation = nil,
       error = error_message,
    }
 end
@@ -64,6 +84,7 @@ local function create_result(
    return {
       ok = true,
       mode = mode,
+      status = "prepared",
       module = contract.module,
       modules =
          clone_modules(
@@ -71,8 +92,10 @@ local function create_result(
          ),
       runtime = contract.runtime,
       source = contract.source,
+      source_resolved = nil,
       destination =
          contract.destination,
+      destination_state = nil,
       strategy = contract.strategy,
       overwrite = contract.overwrite,
       entrypoint = contract.entrypoint,
@@ -81,8 +104,21 @@ local function create_result(
       prepared = true,
       simulated = false,
       executed = false,
+      changed = false,
+      already_satisfied = false,
+      skipped = false,
       command = nil,
+      exit_code = nil,
       reason = nil,
+      stdout = "",
+      stderr = "",
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
+      system_result = nil,
+      verification_result = nil,
+      compensation = nil,
       error = nil,
    }
 end
@@ -130,6 +166,46 @@ local function print_contract(result)
    end
 end
 
+local function apply_deployment_result(
+   result,
+   deployment
+)
+   local fields = {
+      "ok",
+      "status",
+      "source_resolved",
+      "destination",
+      "destination_state",
+      "operation",
+      "executed",
+      "changed",
+      "already_satisfied",
+      "skipped",
+      "command",
+      "exit_code",
+      "reason",
+      "stdout",
+      "stderr",
+      "timed_out",
+      "interrupted",
+      "timeout_seconds",
+      "kill_after_seconds",
+      "system_result",
+      "verification_result",
+      "compensation",
+      "error",
+   }
+
+   for _, field in ipairs(fields) do
+      result[field] =
+         deployment[field]
+   end
+
+   result.simulated = false
+
+   return result
+end
+
 function ShellOperation.prepare(
    action,
    options
@@ -161,8 +237,12 @@ function ShellOperation.simulate(result)
       return result
    end
 
+   result.status = "simulated"
    result.simulated = true
    result.executed = false
+   result.changed = false
+   result.already_satisfied = false
+   result.skipped = false
 
    print_contract(result)
 
@@ -174,7 +254,8 @@ function ShellOperation.simulate(result)
             .. "aucun déploiement shell exécuté"
       )
    elseif result.mode == "apply-safe" then
-      result.reason = "apply-safe-blocked"
+      result.reason =
+         "apply-safe-blocked"
 
       print(
          "[ShellOperation] Apply sécurisé : "
@@ -183,7 +264,7 @@ function ShellOperation.simulate(result)
 
       print(
          "[ShellOperation] Action shell "
-            .. "bloquée volontairement en RC4-B1"
+            .. "bloquée volontairement"
       )
    else
       result.reason = "simulation"
@@ -197,7 +278,10 @@ function ShellOperation.simulate(result)
    return result
 end
 
-function ShellOperation.execute(result)
+function ShellOperation.execute(
+   result,
+   options
+)
    if not result or not result.ok then
       return result
    end
@@ -208,15 +292,54 @@ function ShellOperation.execute(result)
       )
    end
 
+   if result.explicit ~= true then
+      result.ok = false
+      result.status = "unsupported"
+      result.reason =
+         "legacy-apply-real-unsupported"
+
+      result.error =
+         "Le format Shell hérité ne peut pas être déployé réellement"
+
+      return result
+   end
+
    print_contract(result)
 
-   result.ok = false
-   result.simulated = false
-   result.executed = false
-   result.reason = "apply-real-blocked"
+   local deployment =
+      ShellDeploymentExecutor.run(
+         result,
+         options
+      )
 
-   result.error =
-      "Mode apply-real non activé en RC4-B1"
+   result =
+      apply_deployment_result(
+         result,
+         deployment
+      )
+
+   if result.ok
+      and result.already_satisfied
+   then
+      print(
+         "[ShellOperation] État déjà conforme"
+      )
+   elseif result.ok
+      and result.skipped
+   then
+      print(
+         "[ShellOperation] Destination ignorée"
+      )
+   elseif result.ok then
+      print(
+         "[ShellOperation] Runtime déployé et vérifié"
+      )
+   else
+      print(
+         "[ShellOperation] Échec : "
+            .. tostring(result.error)
+      )
+   end
 
    return result
 end
@@ -247,7 +370,8 @@ function ShellOperation.run(
 
    if result.mode == "apply-real" then
       return ShellOperation.execute(
-         result
+         result,
+         options
       )
    end
 
