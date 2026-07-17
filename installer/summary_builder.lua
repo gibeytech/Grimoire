@@ -56,9 +56,31 @@ function SummaryBuilder.build(results)
             end
         end
 
-        if details.module then
+        local shell_modules =
+            details.modules
+
+        if type(shell_modules) ~= "table"
+            and type(details.shell) == "table"
+        then
+            shell_modules =
+                details.shell.modules
+        end
+
+        if type(shell_modules) == "table" then
+            bucket.runtime =
+                details.runtime
+                or (
+                    details.shell
+                    and details.shell.runtime
+                )
+
+            bucket.modules =
+                (bucket.modules or 0)
+                + #shell_modules
+        elseif details.module then
             bucket.runtime = details.runtime
-            bucket.modules = (bucket.modules or 0) + 1
+            bucket.modules =
+                (bucket.modules or 0) + 1
         end
 
         local file_operation = extract_file_operation(details)

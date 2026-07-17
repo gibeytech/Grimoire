@@ -14,6 +14,10 @@ local ServiceSpec = require(
     "installer.model.service_spec"
 )
 
+local ShellSpec = require(
+    "installer.model.shell_spec"
+)
+
 local ExecutionPlanBuilder = {}
 
 local function execution_mode(options)
@@ -269,20 +273,58 @@ local function add_service_actions(actions, plan)
     end
 end
 
-local function add_shell_actions(actions, plan)
-    local shell = plan:getShell()
+local function add_shell_actions(
+    actions,
+    plan,
+    options
+)
+    local shell_configuration =
+        plan:getShell()
 
-    for _, module in ipairs(
-        shell.modules or {}
-    ) do
-        add_action(actions, {
-            type = "shell_operation",
-            manager = "shell",
-            name = "prepare-module",
-            module = module,
-            runtime = shell.runtime,
-        })
+    -- Certains plans synthétiques ciblent uniquement un manager.
+    -- Une configuration shell entièrement absente ne produit donc
+    -- aucune action. Une configuration partielle reste invalide.
+    if type(shell_configuration) ~= "table"
+        or next(shell_configuration) == nil
+    then
+        return
     end
+
+    local shell, shell_error =
+        ShellSpec.normalize(
+            shell_configuration
+        )
+
+    if not shell then
+        error(
+            "Configuration shell invalide : "
+                .. tostring(shell_error)
+        )
+    end
+
+    add_action(actions, {
+        type = "shell_operation",
+        manager = "shell",
+        name = "deploy-runtime",
+        runtime = shell.runtime,
+        modules =
+            ShellSpec.clone_modules(
+                shell.modules
+            ),
+        source =
+            resolve_path(
+                shell.source,
+                options
+            ),
+        destination =
+            resolve_path(
+                shell.destination,
+                options
+            ),
+        strategy = shell.strategy,
+        overwrite = shell.overwrite,
+        entrypoint = shell.entrypoint,
+    })
 end
 
 local function add_asset_actions(
@@ -359,7 +401,11 @@ function ExecutionPlanBuilder.build(plan, options)
 
     add_package_actions(actions, plan)
     add_service_actions(actions, plan)
-    add_shell_actions(actions, plan)
+    add_shell_actions(
+        actions,
+        plan,
+        options
+    )
     add_asset_actions(actions, plan, options)
     add_deploy_actions(actions, plan, options)
 

@@ -78,7 +78,15 @@ local function result_details(action, runner_config, runner_result)
 
     if action.type == "shell_operation" then
         details.module = runner_result.module
+        details.modules = runner_result.modules
         details.runtime = runner_result.runtime
+        details.source = runner_result.source
+        details.destination =
+            runner_result.destination
+        details.strategy =
+            runner_result.strategy
+        details.entrypoint =
+            runner_result.entrypoint
     end
 
     return details

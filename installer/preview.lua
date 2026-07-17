@@ -61,7 +61,23 @@ local function append_execution_action(lines, action)
     elseif action.type == "service_operation" then
         label = label .. " " .. tostring(action.service)
     elseif action.type == "shell_operation" then
-        label = label .. " " .. tostring(action.module)
+        if type(action.modules) == "table" then
+            label =
+                label
+                .. " "
+                .. tostring(action.runtime)
+                .. " ("
+                .. tostring(#action.modules)
+                .. " modules) "
+                .. tostring(action.source)
+                .. " -> "
+                .. tostring(action.destination)
+        else
+            label =
+                label
+                .. " "
+                .. tostring(action.module)
+        end
     elseif action.type == "file_operation" and action.operation then
         label = label
             .. " "

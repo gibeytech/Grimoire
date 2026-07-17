@@ -142,6 +142,7 @@ local expected_dry_run_entries = {
       name = "journal-shell",
       mode = "dry-run",
       ok = true,
+      reason = "dry-run",
    },
 }
 
@@ -155,7 +156,7 @@ for index, expected in ipairs(
    assert(entry.simulated == true)
    assert(entry.executed == false)
    assert(entry.exit_code == nil)
-   assert(entry.reason == nil)
+   assert(entry.reason == expected.reason)
    assert(entry.stdout == "")
    assert(entry.stderr == "")
    assert(entry.error == nil)

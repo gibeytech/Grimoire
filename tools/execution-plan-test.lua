@@ -13,7 +13,7 @@ local execution_plan = ExecutionPlanBuilder.build(installation_plan, {
 assert(execution_plan:getMode() == "dry-run")
 assert(type(execution_plan:getProfile()) == "table")
 assert(type(execution_plan:getActions()) == "table")
-assert(execution_plan:countActions() == 19)
+assert(execution_plan:countActions() == 12)
 
 print("")
 print("Actions normalisées : " .. tostring(execution_plan:countActions()))
