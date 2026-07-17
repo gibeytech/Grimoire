@@ -107,6 +107,13 @@ local function service_robustness(plan)
     )
 end
 
+local function shell_robustness(plan)
+    return manager_robustness(
+        plan,
+        "shell"
+    )
+end
+
 local function path_is_absolute(path)
     return value_is_present(path)
         and tostring(path):sub(1, 1) == "/"
@@ -278,6 +285,9 @@ local function add_shell_actions(
     plan,
     options
 )
+    local robustness =
+        shell_robustness(plan)
+
     local shell_configuration =
         plan:getShell()
 
@@ -324,6 +334,14 @@ local function add_shell_actions(
         strategy = shell.strategy,
         overwrite = shell.overwrite,
         entrypoint = shell.entrypoint,
+        timeout_seconds =
+            robustness.timeout_seconds,
+        kill_after_seconds =
+            robustness.kill_after_seconds,
+        retry =
+            clone_retry_policy(
+                robustness.retry
+            ),
     })
 end
 

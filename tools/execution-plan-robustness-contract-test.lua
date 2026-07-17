@@ -48,6 +48,11 @@ assert(robustness.services.timeout_seconds == 30)
 assert(robustness.services.kill_after_seconds == 5)
 assert(robustness.services.retry == false)
 
+assert(type(robustness.shell) == "table")
+assert(robustness.shell.timeout_seconds == 120)
+assert(robustness.shell.kill_after_seconds == 5)
+assert(robustness.shell.retry == false)
+
 -- Builder transporte la configuration dans InstallationPlan.
 local installation_plan = Builder.build("gibeytech")
 local plan_ok, plan_errors =
@@ -67,6 +72,11 @@ assert(type(plan_robustness.services) == "table")
 assert(plan_robustness.services.timeout_seconds == 30)
 assert(plan_robustness.services.kill_after_seconds == 5)
 assert(plan_robustness.services.retry == false)
+
+assert(type(plan_robustness.shell) == "table")
+assert(plan_robustness.shell.timeout_seconds == 120)
+assert(plan_robustness.shell.kill_after_seconds == 5)
+assert(plan_robustness.shell.retry == false)
 
 -- ExecutionPlanBuilder applique uniquement la politique packages
 -- à l'action command produite.
@@ -99,6 +109,10 @@ for _, action in ipairs(
          service_action_count + 1
 
       assert(action.timeout_seconds == 30)
+      assert(action.kill_after_seconds == 5)
+      assert(action.retry == false)
+   elseif action.type == "shell_operation" then
+      assert(action.timeout_seconds == 120)
       assert(action.kill_after_seconds == 5)
       assert(action.retry == false)
    elseif action ~= package_action then

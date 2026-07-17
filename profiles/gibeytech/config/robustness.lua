@@ -14,9 +14,18 @@ return {
         kill_after_seconds = 5,
 
         -- Les mutations systemd sont idempotentes, mais un timeout
-        -- peut survenir après une mutation partielle. Le retry reste
-        -- donc désactivé tant que la réconciliation post-timeout
-        -- n'est pas explicitement contractualisée.
+        -- peut survenir après une mutation partielle.
+        retry = false,
+    },
+
+    shell = {
+        -- Le déploiement peut recopier l'intégralité du runtime QML.
+        timeout_seconds = 120,
+        kill_after_seconds = 5,
+
+        -- Un timeout peut survenir après la création partielle de la
+        -- destination. Le rollback est disponible, mais le retry
+        -- automatique reste désactivé.
         retry = false,
     },
 }
