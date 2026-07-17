@@ -488,6 +488,78 @@ function ServiceExecutor.prepare(
     }
 end
 
+function ServiceExecutor.inspect(
+   value,
+   options
+)
+   options = options or {}
+
+   local prepared =
+      ServiceExecutor.prepare(
+         value,
+         options
+      )
+
+   if not prepared.ok then
+      return prepared
+   end
+
+   local result =
+      create_result(prepared)
+
+   local inspection_result =
+      inspect(
+         prepared,
+         options
+      )
+
+   result.inspection_before =
+      inspection_result
+
+   result.inspected =
+      inspection_result.executed == true
+
+   apply_system_metadata(
+      result,
+      inspection_result.system
+   )
+
+   if not inspection_result.ok then
+      result.ok = false
+      result.error =
+         inspection_result.error
+
+      return result
+   end
+
+   result.state_before =
+      clone_state(
+         inspection_result.state
+      )
+
+   result.state_after =
+      clone_state(
+         inspection_result.state
+      )
+
+   result.already_satisfied =
+      state_satisfies(
+         result.operation,
+         result.state_before
+      )
+
+   result.reason =
+      result.already_satisfied
+         and "already-satisfied"
+         or "inspection-complete"
+
+   result.exit_code = 0
+   result.ok = true
+   result.error = nil
+
+   return result
+end
+
 function ServiceExecutor.execute(
     value,
     options
@@ -533,7 +605,27 @@ function ServiceExecutor.execute(
             inspection_before.state
         )
 
-    if result.state_before.load_state
+
+   if result.state_before.load_state ~= "loaded"
+      and result.operation == "disable"
+      and result.state_before.load_state == "not-found"
+   then
+      result.ok = true
+      result.executed = false
+      result.changed = false
+      result.already_satisfied = true
+      result.state_after =
+         clone_state(
+            result.state_before
+         )
+      result.exit_code = 0
+      result.reason = "already-absent"
+      result.error = nil
+
+      return result
+   end
+
+   if result.state_before.load_state
         ~= "loaded"
     then
         result.ok = false

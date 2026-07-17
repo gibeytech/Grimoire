@@ -43,6 +43,11 @@ assert(robustness.packages.timeout_seconds == 3600)
 assert(robustness.packages.kill_after_seconds == 15)
 assert(robustness.packages.retry == false)
 
+assert(type(robustness.services) == "table")
+assert(robustness.services.timeout_seconds == 30)
+assert(robustness.services.kill_after_seconds == 5)
+assert(robustness.services.retry == false)
+
 -- Builder transporte la configuration dans InstallationPlan.
 local installation_plan = Builder.build("gibeytech")
 local plan_ok, plan_errors =
@@ -57,6 +62,11 @@ assert(type(plan_robustness.packages) == "table")
 assert(plan_robustness.packages.timeout_seconds == 3600)
 assert(plan_robustness.packages.kill_after_seconds == 15)
 assert(plan_robustness.packages.retry == false)
+
+assert(type(plan_robustness.services) == "table")
+assert(plan_robustness.services.timeout_seconds == 30)
+assert(plan_robustness.services.kill_after_seconds == 5)
+assert(plan_robustness.services.retry == false)
 
 -- ExecutionPlanBuilder applique uniquement la politique packages
 -- à l'action command produite.
@@ -79,13 +89,26 @@ assert(package_action.timeout_seconds == 3600)
 assert(package_action.kill_after_seconds == 15)
 assert(package_action.retry == false)
 
-for _, action in ipairs(execution_plan:getActions()) do
-   if action ~= package_action then
+local service_action_count = 0
+
+for _, action in ipairs(
+   execution_plan:getActions()
+) do
+   if action.type == "service_operation" then
+      service_action_count =
+         service_action_count + 1
+
+      assert(action.timeout_seconds == 30)
+      assert(action.kill_after_seconds == 5)
+      assert(action.retry == false)
+   elseif action ~= package_action then
       assert(action.timeout_seconds == nil)
       assert(action.kill_after_seconds == nil)
       assert(action.retry == nil)
    end
 end
+
+assert(service_action_count == 6)
 
 -- Une politique de retry explicite est clonée dans le plan.
 local retry_configuration = {

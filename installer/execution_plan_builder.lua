@@ -73,7 +73,7 @@ local function clone_retry_policy(value)
     return clone
 end
 
-local function package_robustness(plan)
+local function manager_robustness(plan, manager)
     if type(plan.getRobustness) ~= "function" then
         return {}
     end
@@ -81,12 +81,26 @@ local function package_robustness(plan)
     local robustness = plan:getRobustness()
 
     if type(robustness) ~= "table"
-        or type(robustness.packages) ~= "table"
+        or type(robustness[manager]) ~= "table"
     then
         return {}
     end
 
-    return robustness.packages
+    return robustness[manager]
+end
+
+local function package_robustness(plan)
+    return manager_robustness(
+        plan,
+        "packages"
+    )
+end
+
+local function service_robustness(plan)
+    return manager_robustness(
+        plan,
+        "services"
+    )
 end
 
 local function path_is_absolute(path)
@@ -226,6 +240,9 @@ local function service_definitions(plan)
 end
 
 local function add_service_actions(actions, plan)
+    local robustness =
+        service_robustness(plan)
+
     for _, definition in ipairs(
         service_definitions(plan)
     ) do
@@ -234,12 +251,20 @@ local function add_service_actions(actions, plan)
             manager = "services",
             name =
                 definition.operation
-                    .. "-service",
+                .. "-service",
             service = definition.unit,
             unit = definition.unit,
             operation =
                 definition.operation,
             scope = definition.scope,
+            timeout_seconds =
+                robustness.timeout_seconds,
+            kill_after_seconds =
+                robustness.kill_after_seconds,
+            retry =
+                clone_retry_policy(
+                    robustness.retry
+                ),
         })
     end
 end
