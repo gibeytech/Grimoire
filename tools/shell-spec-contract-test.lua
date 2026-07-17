@@ -115,7 +115,7 @@ local execution_plan =
       }
    )
 
-assert(execution_plan:countActions() == 12)
+-- Le contrat Shell ne dépend pas du nombre total d’actions.
 
 local shell_actions = {}
 

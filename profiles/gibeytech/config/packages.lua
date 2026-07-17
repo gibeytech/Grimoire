@@ -6,6 +6,11 @@ return {
             "wget",
             "unzip",
             "rsync",
+            "fish",
+            "fastfetch",
+            "starship",
+            "eza",
+            "bat",
         },
 
         desktop = {
@@ -14,6 +19,15 @@ return {
             "kitty",
             "thunar",
             "swaync",
+            "wlogout",
+            "hypridle",
+            "hyprlock",
+            "wl-clipboard",
+            "cliphist",
+            "brightnessctl",
+            "playerctl",
+            "grim",
+            "slurp",
         },
 
         development = {

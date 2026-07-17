@@ -6,6 +6,5 @@ Theme = {
     tokens = Tokens,
 }
 
-require("theme.exporters.waybar")
 require("theme.exporters.wlogout")
 require("theme.exporters.swaync")

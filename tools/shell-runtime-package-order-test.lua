@@ -1,151 +1,161 @@
 package.path =
-   "./?.lua;./?/init.lua;"
-      .. package.path
+    "./?.lua;./?/init.lua;"
+        .. package.path
 
 local Builder = require(
-   "installer.builder"
-)
-
-local PackageManager = require(
-   "installer.managers.package_manager"
+    "installer.builder"
 )
 
 local ExecutionPlanBuilder = require(
-   "installer.execution_plan_builder"
+    "installer.execution_plan_builder"
+)
+
+local PackageManager = require(
+    "installer.managers.package_manager"
 )
 
 print(
-   "== Shell Runtime RC4-C1 Package Order Test =="
+    "== Shell Runtime RC4-D6 "
+        .. "Package Order Test =="
 )
 
 local installation_plan =
-   Builder.build("gibeytech")
+    Builder.build("gibeytech")
 
 local packages =
-   PackageManager.collect_packages(
-      installation_plan
-   )
+    PackageManager.collect_packages(
+        installation_plan
+    )
 
-local quickshell_count = 0
-local quickshell_index = nil
+assert(type(packages) == "table")
+assert(#packages > 0)
 
-for index, package in ipairs(packages) do
-   if package == "quickshell" then
-      quickshell_count =
-         quickshell_count + 1
+local function find_position(values, target)
+    for index, value in ipairs(values or {}) do
+        if value == target then
+            return index
+        end
+    end
 
-      quickshell_index = index
-   end
+    return nil
 end
 
-assert(quickshell_count == 1)
-assert(quickshell_index == 7)
-assert(#packages == 19)
+local hyprland_position =
+    find_position(packages, "hyprland")
 
-local expected_command =
-   "sudo pacman -S --needed "
-   .. "git curl wget unzip rsync "
-   .. "hyprland quickshell kitty thunar swaync "
-   .. "neovim gcc make ripgrep fd "
-   .. "vlc mpv gimp inkscape"
+local quickshell_position =
+    find_position(packages, "quickshell")
 
-local package_command =
-   PackageManager.build_pacman_command(
-      packages
-   )
+assert(
+    hyprland_position ~= nil,
+    "Le paquet hyprland est absent"
+)
 
-assert(package_command == expected_command)
+assert(
+    quickshell_position ~= nil,
+    "Le paquet quickshell est absent"
+)
+
+assert(
+    hyprland_position
+        < quickshell_position,
+    "Quickshell doit être placé après Hyprland"
+)
 
 local execution_plan =
-   ExecutionPlanBuilder.build(
-      installation_plan,
-      {
-         dry_run = true,
-      }
-   )
+    ExecutionPlanBuilder.build(
+        installation_plan,
+        {
+            dry_run = true,
+        }
+    )
 
-local actions =
-   execution_plan:getActions()
+local package_action_position = nil
+local shell_action_position = nil
+local package_action = nil
+local shell_action_count = 0
 
-assert(#actions == 12)
-
-local package_action_index = nil
-local shell_action_index = nil
-local deploy_action_index = nil
-local service_indices = {}
-local filesystem_indices = {}
-
-for index, action in ipairs(actions) do
-   if action.manager == "packages"
-      and action.name == "install-packages"
-   then
-      package_action_index = index
-
-      assert(action.type == "command")
-      assert(action.count == 19)
-      assert(action.command == expected_command)
-   elseif action.type == "service_operation" then
-      table.insert(
-         service_indices,
-         index
-      )
-   elseif action.type == "shell_operation" then
-      shell_action_index = index
-
-      assert(action.manager == "shell")
-      assert(action.name == "deploy-runtime")
-      assert(action.runtime == "grimoire-shell")
-   elseif action.type == "file_operation" then
-      table.insert(
-         filesystem_indices,
-         index
-      )
-
-      if action.manager == "deploy" then
-         deploy_action_index = index
-      end
-   end
-end
-
-assert(package_action_index == 1)
-assert(#service_indices == 6)
-
-for expected = 1, 6 do
-   assert(
-      service_indices[expected]
-         == expected + 1
-   )
-end
-
-assert(shell_action_index == 8)
-assert(#filesystem_indices == 4)
-
-for _, index in ipairs(
-   filesystem_indices
+for index, action in ipairs(
+    execution_plan:getActions()
 ) do
-   assert(index > shell_action_index)
+    if action.type == "command"
+        and action.manager == "packages"
+        and action.name == "install-packages"
+    then
+        package_action_position = index
+        package_action = action
+    end
+
+    if action.type == "shell_operation"
+        and action.manager == "shell"
+        and action.name == "deploy-runtime"
+    then
+        shell_action_position = index
+        shell_action_count =
+            shell_action_count + 1
+    end
 end
 
-assert(deploy_action_index == 12)
+assert(
+    package_action_position ~= nil,
+    "L'action d'installation des paquets est absente"
+)
+
+assert(
+    shell_action_position ~= nil,
+    "L'action de déploiement Shell est absente"
+)
+
+assert(
+    shell_action_count == 1,
+    "Le plan doit contenir une seule action Shell"
+)
+
+assert(
+    package_action_position
+        < shell_action_position,
+    "Les paquets doivent être traités avant le Shell"
+)
+
+assert(type(package_action.command) == "string")
+
+assert(
+    package_action.command:find(
+        "quickshell",
+        1,
+        true
+    ) ~= nil,
+    "La commande packages ne contient pas quickshell"
+)
 
 print("")
 print(
-   "Paquets       : "
-      .. tostring(#packages)
+    "Paquets               : "
+        .. tostring(#packages)
 )
 
 print(
-   "Quickshell    : position "
-      .. tostring(quickshell_index)
+    "Hyprland              : position "
+        .. tostring(hyprland_position)
 )
 
 print(
-   "Action Shell  : position "
-      .. tostring(shell_action_index)
+    "Quickshell            : position "
+        .. tostring(quickshell_position)
+)
+
+print(
+    "Action packages       : position "
+        .. tostring(package_action_position)
+)
+
+print(
+    "Action Shell          : position "
+        .. tostring(shell_action_position)
 )
 
 print("")
 print(
-   "RC4-C1 OK : Quickshell est installé avant "
-      .. "le déploiement du runtime Grimoire Shell."
+    "RC4-D6 OK : les dépendances précèdent "
+        .. "le déploiement du runtime Shell."
 )

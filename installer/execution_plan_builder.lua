@@ -134,6 +134,40 @@ local function path_uses_home(path)
         or string_path:sub(1, 8) == "${HOME}/"
 end
 
+local function normalize_lexical_path(path)
+    local string_path = tostring(path)
+    local absolute = string_path:sub(1, 1) == "/"
+    local parts = {}
+
+    for part in string_path:gmatch("[^/]+") do
+        if part == ".." then
+            if #parts > 0
+                and parts[#parts] ~= ".."
+            then
+                table.remove(parts)
+            elseif not absolute then
+                table.insert(parts, part)
+            end
+        elseif part ~= "."
+            and part ~= ""
+        then
+            table.insert(parts, part)
+        end
+    end
+
+    local normalized = table.concat(parts, "/")
+
+    if absolute then
+        normalized = "/" .. normalized
+    end
+
+    if normalized == "" then
+        return absolute and "/" or "."
+    end
+
+    return normalized
+end
+
 local function join_paths(base, relative)
     local normalized_base = tostring(base)
     local normalized_relative = tostring(relative)
@@ -151,12 +185,16 @@ local function join_paths(base, relative)
     end
 
     if normalized_relative == "" then
-        return normalized_base
+        return normalize_lexical_path(
+            normalized_base
+        )
     end
 
-    return normalized_base
-        .. "/"
-        .. normalized_relative
+    return normalize_lexical_path(
+        normalized_base
+            .. "/"
+            .. normalized_relative
+    )
 end
 
 local function resolve_path(path, options)
@@ -345,6 +383,43 @@ local function add_shell_actions(
     })
 end
 
+local function asset_entries(assets)
+    if type(assets) ~= "table" then
+        return {}
+    end
+
+    if type(assets.entries) == "table" then
+        return assets.entries
+    end
+
+    local names = {}
+    local entries = {}
+
+    for name, config in pairs(assets) do
+        if name ~= "entries"
+            and type(config) == "table"
+        then
+            table.insert(names, name)
+        end
+    end
+
+    table.sort(names)
+
+    for _, name in ipairs(names) do
+        local config = assets[name]
+
+        table.insert(entries, {
+            name = name,
+            source = config.source,
+            destination = config.destination,
+            operation = config.operation,
+            overwrite = config.overwrite,
+        })
+    end
+
+    return entries
+end
+
 local function add_asset_actions(
     actions,
     plan,
@@ -353,13 +428,19 @@ local function add_asset_actions(
     local profile = plan:getProfile()
     local assets = plan:getAssets()
 
-    for name, config in pairs(assets or {}) do
+    for index, config in ipairs(
+        asset_entries(assets)
+    ) do
         add_action(actions, {
             type = "file_operation",
             manager = "assets",
-            name = name,
+            name =
+                config.name
+                or ("asset-" .. tostring(index)),
             operation = {
-                type = "copy",
+                type =
+                    config.operation
+                    or "copy",
                 source =
                     resolve_profile_source(
                         profile,
@@ -378,6 +459,35 @@ local function add_asset_actions(
     end
 end
 
+local function dotfile_entries(dotfiles)
+    if type(dotfiles) ~= "table" then
+        return {}
+    end
+
+    if type(dotfiles.entries) == "table" then
+        return dotfiles.entries
+    end
+
+    if dotfiles.source then
+        return {
+            {
+                name = "dotfiles",
+                source = dotfiles.source,
+                destination =
+                    dotfiles.destination
+                    or "~/.config",
+                operation =
+                    dotfiles.operation
+                    or "symlink",
+                overwrite =
+                    dotfiles.overwrite,
+            },
+        }
+    end
+
+    return {}
+end
+
 local function add_deploy_actions(
     actions,
     plan,
@@ -386,27 +496,32 @@ local function add_deploy_actions(
     local profile = plan:getProfile()
     local dotfiles = plan:getDotfiles()
 
-    if dotfiles and dotfiles.source then
+    for index, config in ipairs(
+        dotfile_entries(dotfiles)
+    ) do
         add_action(actions, {
             type = "file_operation",
             manager = "deploy",
-            name = "dotfiles",
+            name =
+                config.name
+                or ("dotfile-" .. tostring(index)),
             operation = {
-                type = "symlink",
+                type =
+                    config.operation
+                    or "copy",
                 source =
                     resolve_profile_source(
                         profile,
-                        dotfiles.source,
+                        config.source,
                         options
                     ),
                 destination =
                     resolve_path(
-                        dotfiles.destination
-                            or "~/.config",
+                        config.destination,
                         options
                     ),
                 overwrite =
-                    dotfiles.overwrite,
+                    config.overwrite,
             },
         })
     end

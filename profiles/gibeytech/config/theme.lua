@@ -4,8 +4,8 @@ return {
     gtk = "Grimoire",
     qt = "Grimoire",
 
-    icons = "grimoire-cursors",
-    cursor = "Grimoire",
+    icons = "hicolor",
+    cursor = "Grimoire-Cursors",
 
     fonts = {
         monospace = "JetBrainsMono Nerd Font",

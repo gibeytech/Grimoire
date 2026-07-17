@@ -93,10 +93,42 @@ local function print_execution_summary(execution)
     print("")
     print("Fichiers")
     print("--------")
-    print("Copies : " .. tostring(summary_value(summary, "assets", "copies")))
-    print("Liens  : " .. tostring(summary_value(summary, "deploy", "symlinks")))
 
-    print("")
+    local asset_copies =
+        summary.assets
+        and summary.assets.copies
+        or 0
+
+    local deploy_copies =
+        summary.deploy
+        and summary.deploy.copies
+        or 0
+
+    local asset_symlinks =
+        summary.assets
+        and summary.assets.symlinks
+        or 0
+
+    local deploy_symlinks =
+        summary.deploy
+        and summary.deploy.symlinks
+        or 0
+
+    print(
+        "Copies : "
+        .. tostring(
+            asset_copies
+                + deploy_copies
+        )
+    )
+
+    print(
+        "Liens  : "
+        .. tostring(
+            asset_symlinks
+                + deploy_symlinks
+        )
+    )
     print("Total actions préparées : " .. tostring(total_actions))
     print("Total actions exécutées : " .. tostring(execution.executed_actions or 0))
 end

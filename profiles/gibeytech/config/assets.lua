@@ -1,16 +1,19 @@
 return {
-    wallpapers = {
-        source = "wallpapers",
-        destination = "~/.local/share/grimoire/wallpapers",
-    },
+    entries = {
+        {
+            name = "gtk-theme",
+            source = "assets/themes/Grimoire",
+            destination = "~/.local/share/themes/Grimoire",
+            operation = "copy",
+            overwrite = false,
+        },
 
-    themes = {
-        source = "themes",
-        destination = "~/.local/share/themes",
-    },
-
-    icons = {
-        source = "icons",
-        destination = "~/.local/share/icons",
+        {
+            name = "cursor-theme",
+            source = "assets/icons/Grimoire-Cursors",
+            destination = "~/.local/share/icons/Grimoire-Cursors",
+            operation = "copy",
+            overwrite = false,
+        },
     },
 }

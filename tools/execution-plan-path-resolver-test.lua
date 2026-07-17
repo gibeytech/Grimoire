@@ -1,27 +1,42 @@
-package.path = "./?.lua;./?/init.lua;" .. package.path
+package.path =
+    "./?.lua;./?/init.lua;"
+        .. package.path
 
-local Builder = require("installer.builder")
+local Builder = require(
+    "installer.builder"
+)
+
 local ExecutionPlanBuilder = require(
     "installer.execution_plan_builder"
 )
 
-print("== ExecutionPlanBuilder RC2-D2 Path Resolver Test ==")
-
-local test_home = "/home/grimoire-test"
-
-local installation_plan = Builder.build("gibeytech")
-
-local execution_plan = ExecutionPlanBuilder.build(
-    installation_plan,
-    {
-        dry_run = true,
-        home = test_home,
-    }
+print(
+    "== ExecutionPlanBuilder "
+        .. "RC4-D6 Path Resolver Test =="
 )
 
+local test_home =
+    "/home/grimoire-test"
+
+local installation_plan =
+    Builder.build("gibeytech")
+
+local execution_plan =
+    ExecutionPlanBuilder.build(
+        installation_plan,
+        {
+            dry_run = true,
+            home = test_home,
+        }
+    )
+
 local function find_action(manager, name)
-    for _, action in ipairs(execution_plan:getActions()) do
-        if action.manager == manager and action.name == name then
+    for _, action in ipairs(
+        execution_plan:getActions()
+    ) do
+        if action.manager == manager
+            and action.name == name
+        then
             return action
         end
     end
@@ -29,107 +44,146 @@ local function find_action(manager, name)
     return nil
 end
 
-----------------------------------------------------------------------
--- Wallpapers
-----------------------------------------------------------------------
+local function assert_operation(
+    manager,
+    name,
+    operation_type,
+    source,
+    destination
+)
+    local action =
+        find_action(manager, name)
 
-local wallpapers_action = find_action(
+    assert(
+        action ~= nil,
+        "Action absente : "
+            .. manager
+            .. "/"
+            .. name
+    )
+
+    assert(action.type == "file_operation")
+    assert(action.operation.type == operation_type)
+    assert(action.operation.source == source)
+    assert(
+        action.operation.destination
+            == destination
+    )
+
+    assert(
+        action.operation.overwrite
+            == false
+    )
+end
+
+assert_operation(
     "assets",
-    "wallpapers"
+    "gtk-theme",
+    "copy",
+    "profiles/gibeytech/assets/themes/Grimoire",
+    test_home
+        .. "/.local/share/themes/Grimoire"
 )
 
-assert(wallpapers_action ~= nil)
-assert(wallpapers_action.type == "file_operation")
-assert(wallpapers_action.operation.type == "copy")
-assert(
-    wallpapers_action.operation.source
-        == "profiles/gibeytech/wallpapers"
-)
-assert(
-    wallpapers_action.operation.destination
-        == "/home/grimoire-test/.local/share/grimoire/wallpapers"
-)
-assert(wallpapers_action.operation.overwrite == nil)
-
-----------------------------------------------------------------------
--- Themes
-----------------------------------------------------------------------
-
-local themes_action = find_action(
+assert_operation(
     "assets",
-    "themes"
+    "cursor-theme",
+    "copy",
+    "profiles/gibeytech/assets/icons/Grimoire-Cursors",
+    test_home
+        .. "/.local/share/icons/Grimoire-Cursors"
 )
 
-assert(themes_action ~= nil)
-assert(themes_action.type == "file_operation")
-assert(themes_action.operation.type == "copy")
-assert(
-    themes_action.operation.source
-        == "profiles/gibeytech/themes"
-)
-assert(
-    themes_action.operation.destination
-        == "/home/grimoire-test/.local/share/themes"
-)
+local dotfiles = {
+    {
+        name = "hypr",
+        source = "config/hypr",
+        destination =
+            test_home .. "/.config/hypr",
+    },
+    {
+        name = "kitty",
+        source = "config/kitty",
+        destination =
+            test_home .. "/.config/kitty",
+    },
+    {
+        name = "fish",
+        source = "config/fish",
+        destination =
+            test_home .. "/.config/fish",
+    },
+    {
+        name = "swaync",
+        source = "config/swaync",
+        destination =
+            test_home .. "/.config/swaync",
+    },
+    {
+        name = "wlogout",
+        source = "config/wlogout",
+        destination =
+            test_home .. "/.config/wlogout",
+    },
+    {
+        name = "grimoire",
+        source = "config/grimoire",
+        destination =
+            test_home .. "/.config/grimoire",
+    },
+}
 
-----------------------------------------------------------------------
--- Icons
-----------------------------------------------------------------------
+for _, definition in ipairs(dotfiles) do
+    assert_operation(
+        "deploy",
+        definition.name,
+        "copy",
+        definition.source,
+        definition.destination
+    )
+end
 
-local icons_action = find_action(
-    "assets",
-    "icons"
-)
+local filesystem_count = 0
 
-assert(icons_action ~= nil)
-assert(icons_action.type == "file_operation")
-assert(icons_action.operation.type == "copy")
-assert(
-    icons_action.operation.source
-        == "profiles/gibeytech/icons"
-)
-assert(
-    icons_action.operation.destination
-        == "/home/grimoire-test/.local/share/icons"
-)
-
-----------------------------------------------------------------------
--- Dotfiles
-----------------------------------------------------------------------
-
-local dotfiles_action = find_action(
-    "deploy",
-    "dotfiles"
-)
-
-assert(dotfiles_action ~= nil)
-assert(dotfiles_action.type == "file_operation")
-assert(dotfiles_action.operation.type == "symlink")
-assert(
-    dotfiles_action.operation.source
-        == "profiles/gibeytech/dotfiles"
-)
-assert(
-    dotfiles_action.operation.destination
-        == "/home/grimoire-test/.config"
-)
-assert(dotfiles_action.operation.overwrite == nil)
-
-----------------------------------------------------------------------
--- Aucun chemin utilisateur non résolu
-----------------------------------------------------------------------
-
-for _, action in ipairs(execution_plan:getActions()) do
+for _, action in ipairs(
+    execution_plan:getActions()
+) do
     if action.type == "file_operation" then
+        filesystem_count =
+            filesystem_count + 1
+
         local operation = action.operation
 
         assert(type(operation.source) == "string")
-        assert(type(operation.destination) == "string")
+        assert(
+            type(operation.destination)
+                == "string"
+        )
 
-        assert(operation.source:find("~", 1, true) == nil)
-        assert(operation.destination:find("~", 1, true) == nil)
+        assert(
+            operation.source:find(
+                "~",
+                1,
+                true
+            ) == nil
+        )
 
-        assert(operation.source:find("$HOME", 1, true) == nil)
+        assert(
+            operation.destination:find(
+                "~",
+                1,
+                true
+            ) == nil
+        )
+
+        assert(
+            operation.source:find(
+                "$HOME",
+                1,
+                true
+            ) == nil
+        )
+
         assert(
             operation.destination:find(
                 "$HOME",
@@ -139,37 +193,49 @@ for _, action in ipairs(execution_plan:getActions()) do
         )
 
         assert(
-            operation.source:find(
-                "${HOME}",
-                1,
-                true
-            ) == nil
+            operation.destination
+                ~= test_home .. "/.config"
         )
 
         assert(
-            operation.destination:find(
-                "${HOME}",
-                1,
-                true
-            ) == nil
+            operation.destination
+                ~= test_home
+                    .. "/.local/share/themes"
+        )
+
+        assert(
+            operation.destination
+                ~= test_home
+                    .. "/.local/share/icons"
         )
     end
 end
 
-----------------------------------------------------------------------
--- Mode apply-real transmis
-----------------------------------------------------------------------
+assert(filesystem_count == 8)
 
-local apply_real_plan = ExecutionPlanBuilder.build(
-    installation_plan,
-    {
-        dry_run = false,
-        apply_real = true,
-        home = test_home,
-    }
+local apply_real_plan =
+    ExecutionPlanBuilder.build(
+        installation_plan,
+        {
+            dry_run = false,
+            apply_real = true,
+            home = test_home,
+        }
+    )
+
+assert(
+    apply_real_plan:getMode()
+        == "apply-real"
 )
 
-assert(apply_real_plan.mode == "apply-real")
+print("")
+print(
+    "Actions filesystem : "
+        .. tostring(filesystem_count)
+)
 
 print("")
-print("RC2-D2 OK : l'ExecutionPlan contient des chemins résolus.")
+print(
+    "RC4-D6 OK : le plan utilise huit "
+        .. "destinations explicites et sûres."
+)

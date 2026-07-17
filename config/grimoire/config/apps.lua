@@ -4,6 +4,6 @@ Config.apps = {
     terminal = "kitty",
     browser = "brave",
     editor = "nvim",
-    launcher = "rofi -show drun",
+    launcher = "quickshell -p ~/.config/grimoire-shell ipc call hub toggle",
     fileManager = "thunar",
 }

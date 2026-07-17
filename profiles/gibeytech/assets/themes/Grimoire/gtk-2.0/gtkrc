@@ -1,0 +1,31 @@
+# Grimoire GTK2 Theme
+
+gtk-color-scheme = "base_color:#14110f\nbg_color:#2b211d\nfg_color:#f2ede7\nselected_bg_color:#c77b49\nselected_fg_color:#14110f\ntooltip_bg_color:#2b211d\ntooltip_fg_color:#f2ede7\ntext_color:#f2ede7"
+
+style "default" {
+    bg[NORMAL]      = "#2b211d"
+    bg[PRELIGHT]    = "#362824"
+    bg[ACTIVE]      = "#14110f"
+    bg[SELECTED]    = "#c77b49"
+    bg[INSENSITIVE] = "#2b211d"
+
+    fg[NORMAL]      = "#f2ede7"
+    fg[PRELIGHT]    = "#c77b49"
+    fg[ACTIVE]      = "#f2ede7"
+    fg[SELECTED]    = "#14110f"
+    fg[INSENSITIVE] = "#d8d0c7"
+
+    base[NORMAL]    = "#14110f"
+    base[PRELIGHT]  = "#2b211d"
+    base[ACTIVE]    = "#2b211d"
+    base[SELECTED]  = "#c77b49"
+    base[INSENSITIVE] = "#14110f"
+
+    text[NORMAL]    = "#f2ede7"
+    text[PRELIGHT]  = "#f2ede7"
+    text[ACTIVE]    = "#f2ede7"
+    text[SELECTED]  = "#14110f"
+    text[INSENSITIVE] = "#d8d0c7"
+}
+
+class "*" style "default"

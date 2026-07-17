@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Grimoire
+Comment=Thème sombre rose-violet pour le projet Grimoire
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Grimoire
+MetacityTheme=Grimoire
+IconTheme=hicolor
+CursorTheme=default
+ButtonLayout=close,minimize,maximize:

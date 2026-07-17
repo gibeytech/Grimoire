@@ -21,7 +21,55 @@ return {
     },
 
     dotfiles = {
-        source = "dotfiles",
+        entries = {
+            {
+                name = "hypr",
+                source = "../../config/hypr",
+                destination = "~/.config/hypr",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "kitty",
+                source = "../../config/kitty",
+                destination = "~/.config/kitty",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "fish",
+                source = "../../config/fish",
+                destination = "~/.config/fish",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "swaync",
+                source = "../../config/swaync",
+                destination = "~/.config/swaync",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "wlogout",
+                source = "../../config/wlogout",
+                destination = "~/.config/wlogout",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "grimoire",
+                source = "../../config/grimoire",
+                destination = "~/.config/grimoire",
+                operation = "copy",
+                overwrite = false,
+            },
+        },
     },
 
     minimum_core = "3.0.0",
