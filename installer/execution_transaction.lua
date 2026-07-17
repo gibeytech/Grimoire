@@ -6,6 +6,10 @@ local ServiceRollback = require(
    "installer.service_rollback"
 )
 
+local ShellRollback = require(
+   "installer.shell_rollback"
+)
+
 local ExecutionTransaction = {}
 ExecutionTransaction.__index = ExecutionTransaction
 
@@ -89,6 +93,7 @@ end
 local ROLLBACK_RUNNERS = {
    filesystem = FilesystemRollback,
    service = ServiceRollback,
+   shell = ShellRollback,
 }
 
 local function run_compensation(metadata)

@@ -6,6 +6,10 @@ local ShellDeploymentExecutor = require(
    "installer.shell_deployment_executor"
 )
 
+local ShellCompensationMetadata = require(
+   "installer.result.shell_compensation_metadata"
+)
+
 local ShellOperation = {}
 
 local function resolve_mode(options)
@@ -316,6 +320,11 @@ function ShellOperation.execute(
       apply_deployment_result(
          result,
          deployment
+      )
+
+   result.compensation =
+      ShellCompensationMetadata.complete(
+         result
       )
 
    if result.ok
