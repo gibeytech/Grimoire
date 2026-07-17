@@ -53,7 +53,7 @@ assert(preflight.status == "blocked")
 assert(preflight.file_operations == 8)
 
 assert(
-    preflight.counts.ready_create == 5
+    preflight.counts.ready_create == 6
 )
 
 assert(
@@ -63,18 +63,18 @@ assert(
 
 assert(
     preflight.counts
-        .conflict_empty == 1
+        .conflict_empty == 0
 )
 
 assert(preflight.counts.conflict == 2)
 assert(preflight.counts.invalid_source == 0)
-assert(preflight.counts.blocking == 3)
+assert(preflight.counts.blocking == 2)
 
 local expected = {
     [9] = "ready-create",
     [10] = "ready-create",
     [11] = "conflict",
-    [12] = "conflict-empty",
+    [12] = "ready-create",
     [13] = "conflict",
     [14] = "ready-create",
     [15] = "ready-create",
@@ -147,8 +147,8 @@ assert(#execution.results == 0)
 assert(#execution.journal == 0)
 
 print("")
-print("Créations prêtes    : 5")
-print("Destination vide    : 1")
+print("Créations prêtes    : 6")
+print("Destination vide    : 0")
 print("Conflits            : 2")
 print("Actions dispatchées : 0")
 

@@ -32,8 +32,8 @@ return {
 
             {
                 name = "kitty",
-                source = "../../config/kitty",
-                destination = "~/.config/kitty",
+                source = "../../config/kitty/kitty.conf",
+                destination = "~/.config/kitty/kitty.conf",
                 operation = "copy",
                 overwrite = false,
             },
