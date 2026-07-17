@@ -10,6 +10,14 @@ local ExecutionTransaction = require(
    "installer.execution_transaction"
 )
 
+local FilesystemPreflight = require(
+   "installer.filesystem_preflight"
+)
+
+local ExecutionResult = require(
+   "installer.result.execution_result"
+)
+
 local Executor = {}
 
 local function resolve_mode(options)
@@ -139,7 +147,8 @@ local function failure_result(
    failed_result,
    results,
    journal,
-   transaction
+   transaction,
+   filesystem_preflight
 )
    local rollback = transaction:rollback()
    local control = resolve_control_metadata(journal)
@@ -148,6 +157,8 @@ local function failure_result(
       ok = false,
       dry_run = mode == "dry-run",
       mode = mode,
+      filesystem_preflight =
+         filesystem_preflight,
       transaction_status =
          resolve_failure_status(rollback),
       failure_kind = resolve_failure_kind(journal),
@@ -171,6 +182,115 @@ local function failure_result(
       executed_actions =
          count_executed_actions(results),
    }
+end
+
+local function already_satisfied_file_result(
+   action,
+   mode,
+   preflight_entry
+)
+   local operation_result = {
+      ok = true,
+      mode = mode,
+      operation = action.operation,
+      prepared = true,
+      simulated = false,
+      executed = false,
+      changed = false,
+      already_satisfied = true,
+      skipped = true,
+      status = "already-satisfied",
+      reason = "already-satisfied",
+      command = nil,
+      system_result = nil,
+      exit_code = 0,
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
+      compensation = nil,
+      preflight = preflight_entry,
+      error = nil,
+   }
+
+   return ExecutionResult.ok(
+      action.manager,
+      {
+         dry_run = false,
+         actions = 1,
+         details = {
+            action = action,
+            operation = operation_result,
+         },
+      }
+   )
+end
+
+local function preflight_failure_result(
+   mode,
+   preflight
+)
+   return {
+      ok = false,
+      dry_run = false,
+      mode = mode,
+      filesystem_preflight = preflight,
+      transaction_status = "preflight-failed",
+      failure_kind = "preflight",
+      timed_out = false,
+      interrupted = false,
+      timeout_seconds = nil,
+      kill_after_seconds = nil,
+      retry_attempts = 0,
+      retry_exhausted = false,
+      retry_stopped_reason = nil,
+      total_attempts = 0,
+      retried_actions = 0,
+      failed_at = "filesystem-preflight",
+      results = {},
+      journal = {},
+      rollback =
+         ExecutionTransaction.not_required(
+            mode,
+            "not-required"
+         ),
+      error = preflight.error,
+      executed_actions = 0,
+   }
+end
+
+local function print_filesystem_preflight(
+   preflight
+)
+   local counts =
+      preflight.counts or {}
+
+   print("")
+   print(
+      "[Executor] Préflight filesystem : "
+         .. tostring(preflight.status)
+   )
+
+   print(
+      "[Executor] Créations prêtes      : "
+         .. tostring(
+            counts.ready_create or 0
+         )
+   )
+
+   print(
+      "[Executor] Déjà satisfaites      : "
+         .. tostring(
+            counts.already_satisfied or 0
+         )
+   )
+
+   print(
+      "[Executor] Actions bloquantes    : "
+         .. tostring(
+            counts.blocking or 0
+         )
+   )
 end
 
 local function print_mode(mode)
@@ -227,6 +347,10 @@ function Executor.run(execution_plan, options)
          ok = false,
          dry_run = dry_run,
          mode = mode,
+         filesystem_preflight =
+            FilesystemPreflight.not_required(
+               mode
+            ),
          transaction_status = "invalid",
          failure_kind = "invalid",
          timed_out = false,
@@ -257,6 +381,30 @@ function Executor.run(execution_plan, options)
    local total_actions =
       execution_plan:countActions()
 
+   local filesystem_preflight =
+      FilesystemPreflight.not_required(
+         mode
+      )
+
+   if mode == "apply-real" then
+      filesystem_preflight =
+         FilesystemPreflight.run(
+            execution_plan,
+            options
+         )
+
+      print_filesystem_preflight(
+         filesystem_preflight
+      )
+
+      if not filesystem_preflight.ok then
+         return preflight_failure_result(
+            mode,
+            filesystem_preflight
+         )
+      end
+   end
+
    for index, action in ipairs(actions) do
       print("")
       print(
@@ -266,10 +414,30 @@ function Executor.run(execution_plan, options)
             .. tostring(total_actions)
       )
 
-      local result = ActionDispatcher.dispatch(
-         action,
-         options
-      )
+      local preflight_entry =
+         filesystem_preflight
+            .by_sequence[index]
+
+      local result
+
+      if mode == "apply-real"
+         and action.type == "file_operation"
+         and preflight_entry
+         and preflight_entry.status
+            == "already-satisfied"
+      then
+         result =
+            already_satisfied_file_result(
+               action,
+               mode,
+               preflight_entry
+            )
+      else
+         result = ActionDispatcher.dispatch(
+            action,
+            options
+         )
+      end
 
       table.insert(results, result)
 
@@ -299,7 +467,8 @@ function Executor.run(execution_plan, options)
             result,
             results,
             journal,
-            transaction
+            transaction,
+            filesystem_preflight
          )
       end
    end
@@ -308,6 +477,8 @@ function Executor.run(execution_plan, options)
       ok = true,
       dry_run = dry_run,
       mode = mode,
+      filesystem_preflight =
+         filesystem_preflight,
       transaction_status = "committed",
       failure_kind = nil,
       timed_out = false,
