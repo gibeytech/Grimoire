@@ -2,6 +2,10 @@ local ServiceExecutor = require(
     "installer.service_executor"
 )
 
+local ServiceCompensationMetadata = require(
+    "installer.result.service_compensation_metadata"
+)
+
 local ServiceOperation = {}
 
 local function resolve_mode(options)
@@ -73,6 +77,8 @@ local function from_executor_result(
             executor_result
                 .inspection_after,
         system = executor_result.system,
+        compensation =
+            executor_result.compensation,
         error = executor_result.error,
     }
 end
@@ -112,6 +118,11 @@ function ServiceOperation.prepare(
         ServiceExecutor.prepare(
             action,
             options
+        )
+
+    executor_result.compensation =
+        ServiceCompensationMetadata.not_executed(
+            executor_result
         )
 
     return from_executor_result(
@@ -182,6 +193,11 @@ function ServiceOperation.execute(
             operation = result.operation,
             scope = result.scope,
         }, options)
+
+    executor_result.compensation =
+        ServiceCompensationMetadata.complete(
+            executor_result
+        )
 
     local final_result =
         from_executor_result(

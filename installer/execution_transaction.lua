@@ -2,6 +2,10 @@ local FilesystemRollback = require(
    "installer.filesystem_rollback"
 )
 
+local ServiceRollback = require(
+   "installer.service_rollback"
+)
+
 local ExecutionTransaction = {}
 ExecutionTransaction.__index = ExecutionTransaction
 
@@ -82,9 +86,30 @@ local function create_internal_failure(
    }
 end
 
+local ROLLBACK_RUNNERS = {
+   filesystem = FilesystemRollback,
+   service = ServiceRollback,
+}
+
 local function run_compensation(metadata)
+   local runner = metadata
+      and ROLLBACK_RUNNERS[
+         metadata.kind
+      ]
+      or nil
+
+   if not runner then
+      return create_internal_failure(
+         metadata,
+         "Type de compensation inconnu : "
+            .. tostring(
+               metadata and metadata.kind
+            )
+      )
+   end
+
    local call_ok, result_or_error = pcall(
-      FilesystemRollback.run,
+      runner.run,
       metadata,
       {
          dry_run = false,
