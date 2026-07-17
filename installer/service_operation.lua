@@ -1,5 +1,5 @@
-local ServiceSpec = require(
-    "installer.model.service_spec"
+local ServiceExecutor = require(
+    "installer.service_executor"
 )
 
 local ServiceOperation = {}
@@ -18,46 +18,62 @@ local function resolve_mode(options)
     return "apply-safe"
 end
 
-local function create_result(definition, mode)
-    return {
-        ok = true,
-        mode = mode,
-        service = definition.unit,
-        unit = definition.unit,
-        operation = definition.operation,
-        scope = definition.scope,
-        prepared = true,
-        simulated = false,
-        executed = false,
-        error = nil,
-    }
-end
-
-local function create_invalid_result(
-    action,
-    mode,
-    error_message
+local function from_executor_result(
+    executor_result,
+    mode
 )
     return {
-        ok = false,
+        ok = executor_result.ok == true,
         mode = mode,
-        service = action
-            and (action.service or action.unit)
-            or nil,
-        unit = action
-            and (action.unit or action.service)
-            or nil,
-        operation = action
-            and action.operation
-            or nil,
-        scope = action
-            and action.scope
-            or nil,
-        prepared = false,
+        service = executor_result.service,
+        unit = executor_result.unit,
+        operation =
+            executor_result.operation,
+        scope = executor_result.scope,
+        command = executor_result.command,
+        inspect_command =
+            executor_result.inspect_command,
+        systemctl_path =
+            executor_result.systemctl_path,
+        sudo_path =
+            executor_result.sudo_path,
+        elevated =
+            executor_result.elevated == true,
+        prepared =
+            executor_result.prepared == true,
         simulated = false,
-        executed = false,
-        error = error_message
-            or "Opération service invalide",
+        inspected =
+            executor_result.inspected == true,
+        executed =
+            executor_result.executed == true,
+        changed =
+            executor_result.changed == true,
+        already_satisfied =
+            executor_result
+                .already_satisfied == true,
+        state_before =
+            executor_result.state_before,
+        state_after =
+            executor_result.state_after,
+        exit_code =
+            executor_result.exit_code,
+        reason = executor_result.reason,
+        timed_out =
+            executor_result.timed_out == true,
+        interrupted =
+            executor_result.interrupted == true,
+        timeout_seconds =
+            executor_result.timeout_seconds,
+        kill_after_seconds =
+            executor_result.kill_after_seconds,
+        inspection_before =
+            executor_result
+                .inspection_before,
+        inspection_after =
+            executor_result
+                .inspection_after,
+        system = executor_result.system,
+        error = executor_result.error,
     }
 end
 
@@ -72,22 +88,36 @@ local function print_operation(result)
     )
 end
 
-function ServiceOperation.prepare(action, options)
+local function print_commands(result)
+    print(
+        "[ServiceOperation] Inspection : "
+            .. tostring(
+                result.inspect_command
+            )
+    )
+
+    print(
+        "[ServiceOperation] Commande   : "
+            .. tostring(result.command)
+    )
+end
+
+function ServiceOperation.prepare(
+    action,
+    options
+)
     local mode = resolve_mode(options)
 
-    local definition, definition_error =
-        ServiceSpec.normalize(action)
-
-    if not definition then
-        return create_invalid_result(
+    local executor_result =
+        ServiceExecutor.prepare(
             action,
-            mode,
-            definition_error
-                or "Opération service invalide"
+            options
         )
-    end
 
-    return create_result(definition, mode)
+    return from_executor_result(
+        executor_result,
+        mode
+    )
 end
 
 function ServiceOperation.simulate(result)
@@ -96,7 +126,10 @@ function ServiceOperation.simulate(result)
     end
 
     result.simulated = true
+    result.inspected = false
     result.executed = false
+    result.changed = false
+    result.already_satisfied = false
 
     print_operation(result)
 
@@ -110,11 +143,6 @@ function ServiceOperation.simulate(result)
             "[ServiceOperation] Apply sécurisé : "
                 .. "service préparé mais non modifié"
         )
-
-        print(
-            "[ServiceOperation] Action systemctl "
-                .. "bloquée pendant RC4-A1"
-        )
     else
         print(
             "[ServiceOperation] Simulation : mode "
@@ -122,10 +150,15 @@ function ServiceOperation.simulate(result)
         )
     end
 
+    print_commands(result)
+
     return result
 end
 
-function ServiceOperation.execute(result)
+function ServiceOperation.execute(
+    result,
+    options
+)
     if not result or not result.ok then
         return result
     end
@@ -134,28 +167,64 @@ function ServiceOperation.execute(result)
         return ServiceOperation.simulate(result)
     end
 
-    return {
-        ok = false,
-        mode = result.mode,
-        service = result.service,
-        unit = result.unit,
-        operation = result.operation,
-        scope = result.scope,
-        prepared = true,
-        simulated = false,
-        executed = false,
-        error =
-            "Mode apply-real non activé pendant RC4-A1",
-    }
+    print_operation(result)
+
+    print(
+        "[ServiceOperation] Apply réel : "
+            .. "inspection et convergence systemd"
+    )
+
+    print_commands(result)
+
+    local executor_result =
+        ServiceExecutor.execute({
+            unit = result.unit,
+            operation = result.operation,
+            scope = result.scope,
+        }, options)
+
+    local final_result =
+        from_executor_result(
+            executor_result,
+            result.mode
+        )
+
+    if final_result.ok then
+        if final_result.already_satisfied then
+            print(
+                "[ServiceOperation] État déjà conforme : "
+                    .. tostring(
+                        final_result
+                            .state_after
+                            .unit_file_state
+                    )
+            )
+        elseif final_result.changed then
+            print(
+                "[ServiceOperation] État modifié et vérifié : "
+                    .. tostring(
+                        final_result
+                            .state_after
+                            .unit_file_state
+                    )
+            )
+        end
+    end
+
+    return final_result
 end
 
-function ServiceOperation.run(action, options)
+function ServiceOperation.run(
+    action,
+    options
+)
     options = options or {}
 
-    local result = ServiceOperation.prepare(
-        action,
-        options
-    )
+    local result =
+        ServiceOperation.prepare(
+            action,
+            options
+        )
 
     if not result.ok then
         return result
@@ -164,19 +233,24 @@ function ServiceOperation.run(action, options)
     if result.mode == "dry-run"
         or result.mode == "apply-safe"
     then
-        return ServiceOperation.simulate(result)
+        return ServiceOperation.simulate(
+            result
+        )
     end
 
     if result.mode == "apply-real" then
-        return ServiceOperation.execute(result)
+        return ServiceOperation.execute(
+            result,
+            options
+        )
     end
 
-    return create_invalid_result(
-        action,
-        result.mode,
+    result.ok = false
+    result.error =
         "Mode ServiceOperation inconnu: "
             .. tostring(result.mode)
-    )
+
+    return result
 end
 
 return ServiceOperation

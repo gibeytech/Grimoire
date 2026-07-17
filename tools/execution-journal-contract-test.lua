@@ -171,7 +171,27 @@ assert(
       == "string"
 )
 
-assert(dry_run_result.journal[3].command == nil)
+assert(
+   type(dry_run_result.journal[3].command)
+      == "string"
+)
+
+assert(
+   dry_run_result.journal[3].command:find(
+      "systemctl",
+      1,
+      true
+   ) ~= nil
+)
+
+assert(
+   dry_run_result.journal[3].command:find(
+      "enable",
+      1,
+      true
+   ) ~= nil
+)
+
 assert(dry_run_result.journal[4].command == nil)
 
 ----------------------------------------------------------------------

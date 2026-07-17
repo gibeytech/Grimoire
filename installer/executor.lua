@@ -26,17 +26,36 @@ local function resolve_mode(options)
    return "apply-safe"
 end
 
+local function resolve_runner_result(details)
+   details = details or {}
+
+   if type(details.runner) == "table" then
+      return details.runner
+   end
+
+   if type(details.service) == "table" then
+      return details.service
+   end
+
+   if type(details.shell) == "table" then
+      return details.shell
+   end
+
+   if type(details.operation) == "table" then
+      return details.operation
+   end
+
+   return nil
+end
+
 local function count_executed_actions(results)
    local total = 0
 
    for _, result in ipairs(results or {}) do
-      local details = result.details or {}
-
       local runner_result =
-         details.runner
-         or details.operation
-         or details.service
-         or details.shell
+         resolve_runner_result(
+            result.details
+         )
 
       if runner_result
          and runner_result.executed == true
