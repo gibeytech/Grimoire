@@ -40,8 +40,8 @@ return {
 
             {
                 name = "fish",
-                source = "../../config/fish",
-                destination = "~/.config/fish",
+                source = "../../config/fish/config.fish",
+                destination = "~/.config/fish/config.fish",
                 operation = "copy",
                 overwrite = false,
             },

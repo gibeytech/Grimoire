@@ -110,9 +110,10 @@ local dotfiles = {
     },
     {
         name = "fish",
-        source = "config/fish",
+        source = "config/fish/config.fish",
         destination =
-            test_home .. "/.config/fish",
+            test_home
+                .. "/.config/fish/config.fish",
     },
     {
         name = "swaync",
