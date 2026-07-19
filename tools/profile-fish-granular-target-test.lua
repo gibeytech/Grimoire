@@ -73,7 +73,7 @@ assert(
     "Action deploy/fish absente"
 )
 
-assert(fish_sequence == 13)
+assert(fish_sequence == 15)
 
 local operation =
     assert(fish_action.operation)

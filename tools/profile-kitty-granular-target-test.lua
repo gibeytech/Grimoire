@@ -55,7 +55,7 @@ assert(
     "Action deploy/kitty absente"
 )
 
-assert(kitty_sequence == 12)
+assert(kitty_sequence == 14)
 
 local operation =
     assert(kitty_action.operation)

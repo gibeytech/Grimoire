@@ -11,141 +11,106 @@ local ExecutionPlanBuilder = require(
 )
 
 print(
-    "== ExecutionPlanBuilder "
-        .. "RC4-D6 Path Resolver Test =="
+    "== ExecutionPlanBuilder RC4-D9C "
+        .. "Path Resolver Test =="
 )
 
-local test_home =
-    "/home/grimoire-test"
+local home = os.getenv("HOME")
 
-local installation_plan =
-    Builder.build("gibeytech")
+assert(type(home) == "string")
+assert(home ~= "")
 
 local execution_plan =
     ExecutionPlanBuilder.build(
-        installation_plan,
+        Builder.build("gibeytech"),
         {
             dry_run = true,
-            home = test_home,
         }
     )
 
-local function find_action(manager, name)
-    for _, action in ipairs(
-        execution_plan:getActions()
-    ) do
-        if action.manager == manager
-            and action.name == name
-        then
-            return action
-        end
-    end
-
-    return nil
-end
-
-local function assert_operation(
-    manager,
-    name,
-    operation_type,
-    source,
-    destination
-)
-    local action =
-        find_action(manager, name)
-
-    assert(
-        action ~= nil,
-        "Action absente : "
-            .. manager
-            .. "/"
-            .. name
-    )
-
-    assert(action.type == "file_operation")
-    assert(action.operation.type == operation_type)
-    assert(action.operation.source == source)
-    assert(
-        action.operation.destination
-            == destination
-    )
-
-    assert(
-        action.operation.overwrite
-            == false
-    )
-end
-
-assert_operation(
-    "assets",
-    "gtk-theme",
-    "copy",
-    "profiles/gibeytech/assets/themes/Grimoire",
-    test_home
-        .. "/.local/share/themes/Grimoire"
-)
-
-assert_operation(
-    "assets",
-    "cursor-theme",
-    "copy",
-    "profiles/gibeytech/assets/icons/Grimoire-Cursors",
-    test_home
-        .. "/.local/share/icons/Grimoire-Cursors"
-)
-
-local dotfiles = {
-    {
-        name = "hypr",
-        source = "config/hypr",
+local expected = {
+    ["assets/gtk-theme"] = {
+        source =
+            "profiles/gibeytech/assets/themes/Grimoire",
         destination =
-            test_home .. "/.config/hypr",
+            home
+                .. "/.local/share/themes/Grimoire",
     },
-    {
-        name = "kitty",
-        source = "config/kitty/kitty.conf",
+
+    ["assets/cursor-theme"] = {
+        source =
+            "profiles/gibeytech/assets/icons/"
+                .. "Grimoire-Cursors",
         destination =
-            test_home
+            home
+                .. "/.local/share/icons/"
+                .. "Grimoire-Cursors",
+    },
+
+    ["deploy/hypr-grimoire-loader"] = {
+        source =
+            "config/hypr/grimoire-loader.lua",
+        destination =
+            home
+                .. "/.config/hypr/"
+                .. "grimoire-loader.lua",
+    },
+
+    ["deploy/hypridle"] = {
+        source =
+            "config/hypr/hypridle.conf",
+        destination =
+            home
+                .. "/.config/hypr/"
+                .. "hypridle.conf",
+    },
+
+    ["deploy/hyprlock"] = {
+        source =
+            "config/hypr/hyprlock.conf",
+        destination =
+            home
+                .. "/.config/hypr/"
+                .. "hyprlock.conf",
+    },
+
+    ["deploy/kitty"] = {
+        source =
+            "config/kitty/kitty.conf",
+        destination =
+            home
                 .. "/.config/kitty/kitty.conf",
     },
-    {
-        name = "fish",
-        source = "config/fish/config.fish",
+
+    ["deploy/fish"] = {
+        source =
+            "config/fish/config.fish",
         destination =
-            test_home
+            home
                 .. "/.config/fish/config.fish",
     },
-    {
-        name = "swaync",
+
+    ["deploy/swaync"] = {
         source = "config/swaync",
         destination =
-            test_home .. "/.config/swaync",
+            home .. "/.config/swaync",
     },
-    {
-        name = "wlogout",
+
+    ["deploy/wlogout"] = {
         source = "config/wlogout",
         destination =
-            test_home .. "/.config/wlogout",
+            home .. "/.config/wlogout",
     },
-    {
-        name = "grimoire",
+
+    ["deploy/grimoire"] = {
         source = "config/grimoire",
         destination =
-            test_home .. "/.config/grimoire",
+            home .. "/.config/grimoire",
     },
 }
 
-for _, definition in ipairs(dotfiles) do
-    assert_operation(
-        "deploy",
-        definition.name,
-        "copy",
-        definition.source,
-        definition.destination
-    )
-end
-
 local filesystem_count = 0
+local seen = {}
 
 for _, action in ipairs(
     execution_plan:getActions()
@@ -154,81 +119,75 @@ for _, action in ipairs(
         filesystem_count =
             filesystem_count + 1
 
-        local operation = action.operation
+        local key =
+            tostring(action.manager)
+                .. "/"
+                .. tostring(action.name)
 
-        assert(type(operation.source) == "string")
+        local expected_operation =
+            expected[key]
+
         assert(
-            type(operation.destination)
-                == "string"
+            type(expected_operation)
+                == "table",
+            "Action filesystem inattendue : "
+                .. key
         )
 
-        assert(
-            operation.source:find(
-                "~",
-                1,
-                true
-            ) == nil
-        )
+        local operation =
+            assert(action.operation)
 
         assert(
-            operation.destination:find(
-                "~",
-                1,
-                true
-            ) == nil
-        )
-
-        assert(
-            operation.source:find(
-                "$HOME",
-                1,
-                true
-            ) == nil
-        )
-
-        assert(
-            operation.destination:find(
-                "$HOME",
-                1,
-                true
-            ) == nil
+            operation.source
+                == expected_operation.source,
+            "Source inattendue pour " .. key
         )
 
         assert(
             operation.destination
-                ~= test_home .. "/.config"
+                == expected_operation.destination,
+            "Destination inattendue pour "
+                .. key
+        )
+
+        assert(operation.type == "copy")
+        assert(operation.overwrite == false)
+
+        assert(
+            operation.destination
+                ~= home .. "/.config",
+            "Le répertoire ~/.config complet "
+                .. "ne doit jamais être ciblé"
         )
 
         assert(
             operation.destination
-                ~= test_home
-                    .. "/.local/share/themes"
+                ~= home .. "/.config/hypr",
+            "Le répertoire Hypr complet "
+                .. "ne doit jamais être ciblé"
         )
 
         assert(
             operation.destination
-                ~= test_home
-                    .. "/.local/share/icons"
+                ~= home
+                    .. "/.config/hypr/"
+                    .. "hyprland.lua",
+            "hyprland.lua actif ne doit "
+                .. "jamais être ciblé"
         )
+
+        seen[key] = true
     end
 end
 
-assert(filesystem_count == 8)
+assert(filesystem_count == 10)
 
-local apply_real_plan =
-    ExecutionPlanBuilder.build(
-        installation_plan,
-        {
-            dry_run = false,
-            apply_real = true,
-            home = test_home,
-        }
+for key in pairs(expected) do
+    assert(
+        seen[key] == true,
+        "Action absente : " .. key
     )
-
-assert(
-    apply_real_plan:getMode()
-        == "apply-real"
-)
+end
 
 print("")
 print(
@@ -238,6 +197,6 @@ print(
 
 print("")
 print(
-    "RC4-D6 OK : le plan utilise huit "
+    "RC4-D9C OK : le plan utilise dix "
         .. "destinations explicites et sûres."
 )

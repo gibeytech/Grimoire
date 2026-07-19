@@ -23,16 +23,13 @@ local Executor = require(
 )
 
 print(
-    "== Profile RC4-D8 "
+    "== Profile RC4-D9C "
         .. "Filesystem Preflight Test =="
 )
 
-local installation_plan =
-    Builder.build("gibeytech")
-
 local execution_plan =
     ExecutionPlanBuilder.build(
-        installation_plan,
+        Builder.build("gibeytech"),
         {
             dry_run = false,
             apply_real = true,
@@ -50,11 +47,9 @@ local preflight =
 
 assert(preflight.ok == false)
 assert(preflight.status == "blocked")
-assert(preflight.file_operations == 8)
+assert(preflight.file_operations == 10)
 
-assert(
-    preflight.counts.ready_create == 6
-)
+assert(preflight.counts.ready_create == 9)
 
 assert(
     preflight.counts
@@ -66,19 +61,21 @@ assert(
         .conflict_empty == 0
 )
 
-assert(preflight.counts.conflict == 2)
+assert(preflight.counts.conflict == 1)
 assert(preflight.counts.invalid_source == 0)
-assert(preflight.counts.blocking == 2)
+assert(preflight.counts.blocking == 1)
 
 local expected = {
     [9] = "ready-create",
     [10] = "ready-create",
-    [11] = "conflict",
+    [11] = "ready-create",
     [12] = "ready-create",
-    [13] = "conflict",
+    [13] = "ready-create",
     [14] = "ready-create",
-    [15] = "ready-create",
+    [15] = "conflict",
     [16] = "ready-create",
+    [17] = "ready-create",
+    [18] = "ready-create",
 }
 
 for sequence, status in pairs(expected) do
@@ -147,13 +144,12 @@ assert(#execution.results == 0)
 assert(#execution.journal == 0)
 
 print("")
-print("Créations prêtes    : 6")
-print("Destination vide    : 0")
-print("Conflits            : 2")
+print("Créations prêtes    : 9")
+print("Conflits            : 1")
 print("Actions dispatchées : 0")
 
 print("")
 print(
-    "RC4-D8 OK : le profil GibeyTech "
-        .. "est refusé avant l’Action 1."
+    "RC4-D9C OK : seul config.fish "
+        .. "bloque encore le profil."
 )

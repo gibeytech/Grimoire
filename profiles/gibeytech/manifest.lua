@@ -23,9 +23,25 @@ return {
     dotfiles = {
         entries = {
             {
-                name = "hypr",
-                source = "../../config/hypr",
-                destination = "~/.config/hypr",
+                name = "hypr-grimoire-loader",
+                source = "../../config/hypr/grimoire-loader.lua",
+                destination = "~/.config/hypr/grimoire-loader.lua",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "hypridle",
+                source = "../../config/hypr/hypridle.conf",
+                destination = "~/.config/hypr/hypridle.conf",
+                operation = "copy",
+                overwrite = false,
+            },
+
+            {
+                name = "hyprlock",
+                source = "../../config/hypr/hyprlock.conf",
+                destination = "~/.config/hypr/hyprlock.conf",
                 operation = "copy",
                 overwrite = false,
             },

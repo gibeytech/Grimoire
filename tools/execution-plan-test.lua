@@ -10,56 +10,69 @@ local ExecutionPlanBuilder = require(
     "installer.execution_plan_builder"
 )
 
-print("== ExecutionPlan RC4-D6 Test ==")
-
-local installation_plan =
-    Builder.build("gibeytech")
+print(
+    "== ExecutionPlan RC4-D9C Test =="
+)
 
 local execution_plan =
     ExecutionPlanBuilder.build(
-        installation_plan,
+        Builder.build("gibeytech"),
         {
             dry_run = true,
         }
     )
 
-assert(
-    execution_plan:getMode()
-        == "dry-run"
-)
+local counts = {
+    command = 0,
+    service_operation = 0,
+    shell_operation = 0,
+    file_operation = 0,
+}
 
-assert(
-    type(execution_plan:getProfile())
-        == "table"
-)
+local actions =
+    execution_plan:getActions()
 
-assert(
-    type(execution_plan:getActions())
-        == "table"
-)
+assert(type(actions) == "table")
+assert(#actions == 18)
+assert(execution_plan:countActions() == 18)
 
-assert(
-    execution_plan:countActions()
-        == 16
-)
+for _, action in ipairs(actions) do
+    assert(type(action) == "table")
+    assert(type(action.type) == "string")
+    assert(type(action.manager) == "string")
+    assert(type(action.name) == "string")
+
+    assert(
+        counts[action.type] ~= nil,
+        "Type d'action inattendu : "
+            .. tostring(action.type)
+    )
+
+    counts[action.type] =
+        counts[action.type] + 1
+end
+
+assert(counts.command == 1)
+assert(counts.service_operation == 6)
+assert(counts.shell_operation == 1)
+assert(counts.file_operation == 10)
+
+assert(actions[1].type == "command")
+assert(actions[8].type == "shell_operation")
 
 print("")
 print(
     "Actions normalisées : "
-        .. tostring(
-            execution_plan:countActions()
-        )
+        .. tostring(#actions)
 )
 
 print(
     "Mode                : "
-        .. tostring(
-            execution_plan:getMode()
-        )
+        .. tostring(execution_plan.mode)
 )
 
 print("")
 print(
-    "RC4-D6 OK : le plan contient "
-        .. "16 actions, dont 8 filesystem."
+    "RC4-D9C OK : le plan contient "
+        .. "18 actions, dont 10 filesystem."
 )
