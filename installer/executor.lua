@@ -49,6 +49,12 @@ local function resolve_runner_result(details)
       return details.shell
    end
 
+   if type(details.hypr_activation)
+      == "table"
+   then
+      return details.hypr_activation
+   end
+
    if type(details.operation) == "table" then
       return details.operation
    end
@@ -148,7 +154,8 @@ local function failure_result(
    results,
    journal,
    transaction,
-   filesystem_preflight
+   filesystem_preflight,
+   commit
 )
    local rollback = transaction:rollback()
    local control = resolve_control_metadata(journal)
@@ -159,6 +166,7 @@ local function failure_result(
       mode = mode,
       filesystem_preflight =
          filesystem_preflight,
+      commit = commit,
       transaction_status =
          resolve_failure_status(rollback),
       failure_kind = resolve_failure_kind(journal),
@@ -473,12 +481,30 @@ function Executor.run(execution_plan, options)
       end
    end
 
+   local commit = transaction:commit()
+
+   if not commit.ok then
+      return failure_result(
+         mode,
+         {
+            manager = "transaction-commit",
+            error = commit.error,
+         },
+         results,
+         journal,
+         transaction,
+         filesystem_preflight,
+         commit
+      )
+   end
+
    return {
       ok = true,
       dry_run = dry_run,
       mode = mode,
       filesystem_preflight =
          filesystem_preflight,
+      commit = commit,
       transaction_status = "committed",
       failure_kind = nil,
       timed_out = false,

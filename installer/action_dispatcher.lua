@@ -2,6 +2,9 @@ local CommandRunner = require("installer.command_runner")
 local FileOperations = require("installer.file_operations")
 local ServiceOperation = require("installer.service_operation")
 local ShellOperation = require("installer.shell_operation")
+local HyprActivationOperation = require(
+    "installer.hypr_activation_operation"
+)
 local RetryPolicy = require("installer.retry_policy")
 local ExecutionResult = require("installer.result.execution_result")
 
@@ -39,6 +42,14 @@ local runners = {
         end,
         result_key = "shell",
     },
+
+    hypr_activation = {
+        runner = HyprActivationOperation,
+        input = function(action)
+            return action
+        end,
+        result_key = "hypr_activation",
+    },
 }
 
 local function action_label(action)
@@ -60,6 +71,10 @@ local function action_title(action)
 
     if action.type == "shell_operation" then
         return "Shell"
+    end
+
+    if action.type == "hypr_activation" then
+        return "Activation Hypr"
     end
 
     return "Action"

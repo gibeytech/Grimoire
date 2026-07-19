@@ -5,6 +5,7 @@ local RUNNER_RESULT_KEYS = {
    file_operation = "operation",
    service_operation = "service",
    shell_operation = "shell",
+   hypr_activation = "hypr_activation",
 }
 
 local function resolve_runner_result(action, result)
