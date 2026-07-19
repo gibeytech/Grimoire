@@ -78,6 +78,13 @@ local function append_execution_action(lines, action)
                 .. " "
                 .. tostring(action.module)
         end
+    elseif action.type == "hypr_activation" then
+        label =
+            label
+                .. " "
+                .. tostring(action.destination)
+                .. " <= "
+                .. tostring(action.loader)
     elseif action.type == "file_operation" and action.operation then
         label = label
             .. " "
@@ -109,6 +116,7 @@ local function append_execution_plan(lines, execution_plan)
     table.insert(lines, "  command           : " .. tostring(counts.command or 0))
     table.insert(lines, "  service_operation : " .. tostring(counts.service_operation or 0))
     table.insert(lines, "  shell_operation   : " .. tostring(counts.shell_operation or 0))
+    table.insert(lines, "  hypr_activation   : " .. tostring(counts.hypr_activation or 0))
     table.insert(lines, "  file_operation    : " .. tostring(counts.file_operation or 0))
     table.insert(lines, "")
 

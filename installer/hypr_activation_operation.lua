@@ -10,6 +10,7 @@ local function contract_from_action(action)
     return {
         destination = action.destination,
         loader = action.loader,
+        loader_source = action.loader_source,
         backup = action.backup,
         line = action.line,
     }
@@ -24,6 +25,11 @@ local function print_contract(contract)
     print(
         "[HyprActivationOperation] Chargeur    : "
             .. tostring(contract.loader)
+    )
+
+    print(
+        "[HyprActivationOperation] Source plan : "
+            .. tostring(contract.loader_source)
     )
 
     print(

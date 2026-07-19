@@ -180,6 +180,7 @@ local function normalize_contract(contract)
     return {
         destination = contract.destination,
         loader = contract.loader,
+        loader_source = contract.loader_source,
         backup = contract.backup,
         line = contract.line or DEFAULT_LINE,
     }
@@ -245,6 +246,8 @@ local function create_inspection(contract)
         contract = contract,
         destination = contract.destination,
         loader = contract.loader,
+        loader_source = contract.loader_source,
+        loader_from_plan = false,
         backup = contract.backup,
         line = contract.line,
         line_count = nil,
@@ -322,6 +325,25 @@ function HyprActivationExecutor.inspect(
             contract.loader,
             options
         )
+
+    if not loader_exists
+        and (
+            options == nil
+            or options.apply_real ~= true
+        )
+        and value_is_present(
+            contract.loader_source
+        )
+    then
+        loader_exists =
+            regular_file_exists(
+                contract.loader_source,
+                options
+            )
+
+        inspection.loader_from_plan =
+            loader_exists == true
+    end
 
     if not loader_exists then
         return finalize(
@@ -525,6 +547,10 @@ local function create_result(
         contract = contract,
         destination = contract.destination,
         loader = contract.loader,
+        loader_source = contract.loader_source,
+        loader_from_plan =
+            inspection.loader_from_plan
+                == true,
         backup = contract.backup,
         line = contract.line,
         inspection = inspection,

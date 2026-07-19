@@ -527,6 +527,114 @@ local function add_deploy_actions(
     end
 end
 
+local function find_action(
+    actions,
+    manager,
+    name
+)
+    for sequence, action in ipairs(
+        actions or {}
+    ) do
+        if action.manager == manager
+            and action.name == name
+        then
+            return action, sequence
+        end
+    end
+
+    return nil, nil
+end
+
+local function add_hypr_activation_action(
+    actions,
+    options
+)
+    local loader_action, loader_sequence =
+        find_action(
+            actions,
+            "deploy",
+            "hypr-grimoire-loader"
+        )
+
+    local grimoire_action,
+        grimoire_sequence =
+        find_action(
+            actions,
+            "deploy",
+            "grimoire"
+        )
+
+    local loader_present =
+        loader_action ~= nil
+
+    local grimoire_present =
+        grimoire_action ~= nil
+
+    if not loader_present
+        and not grimoire_present
+    then
+        return false
+    end
+
+    if not loader_action
+        or type(loader_action.operation)
+            ~= "table"
+    then
+        error(
+            "Déploiement du chargeur Hypr absent"
+        )
+    end
+
+    if not grimoire_action
+        or type(grimoire_action.operation)
+            ~= "table"
+    then
+        error(
+            "Déploiement de la configuration "
+                .. "Grimoire absent"
+        )
+    end
+
+    if loader_sequence
+        >= grimoire_sequence
+    then
+        error(
+            "Ordre de déploiement Hypr invalide"
+        )
+    end
+
+    add_action(actions, {
+        type = "hypr_activation",
+        manager = "deploy",
+        name = "activate-hypr",
+
+        destination =
+            resolve_path(
+                "~/.config/hypr/hyprland.lua",
+                options
+            ),
+
+        loader =
+            loader_action.operation.destination,
+
+        loader_source =
+            loader_action.operation.source,
+
+        backup =
+            resolve_path(
+                "~/.local/state/grimoire/"
+                    .. "transactions/"
+                    .. "hyprland.lua.bak",
+                options
+            ),
+
+        line =
+            'require("grimoire-loader")',
+    })
+
+    return true
+end
+
 function ExecutionPlanBuilder.build(plan, options)
     options = options or {}
 
@@ -541,6 +649,11 @@ function ExecutionPlanBuilder.build(plan, options)
     )
     add_asset_actions(actions, plan, options)
     add_deploy_actions(actions, plan, options)
+
+    add_hypr_activation_action(
+        actions,
+        options
+    )
 
     return ExecutionPlan:new({
         profile = plan:getProfile(),
